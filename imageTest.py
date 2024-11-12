@@ -14,7 +14,27 @@ image_paths = {
     'tiger_arctic_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/tigerarctic.png',
     'tiger_forest_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/tigerforest.png',
     'tiger_desert_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/tigerdesert.png',
-    'storm_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/storm.png'
+    'storm_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/storm.png',
+    'win_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/win.png',
+    'english_intro_2_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/english_intro_2.jpeg',
+    'english_intro_3_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/english_intro_3.jpeg',
+    'english_intro_4_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/english_intro_4.jpeg',
+    'english_intro_5_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/english_intro_5.jpeg',
+    'english_intro_6_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/english_intro_6.jpeg',
+    'english_intro_7_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/english_intro_7.jpeg',
+    'english_intro_8_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/english_intro_8.jpeg',
+    'english_intro_9_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/english_intro_9.jpeg',
+    'english_intro_10_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/english_intro_10.jpeg',
+    'spanish_intro_2_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/spanish_intro_2.jpeg',
+    'spanish_intro_3_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/spanish_intro_3.jpeg',
+    'spanish_intro_4_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/spanish_intro_4.jpeg',
+    'spanish_intro_5_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/spanish_intro_5.jpeg',
+    'spanish_intro_6_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/spanish_intro_6.jpeg',
+    'spanish_intro_7_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/spanish_intro_7.jpeg',
+    'spanish_intro_8_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/spanish_intro_8.jpeg',
+    'spanish_intro_9_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/spanish_intro_9.jpeg',
+    'spanish_intro_1_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/spanish_intro_1.jpeg',
+    'welcome_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/welcome.jpeg'
 }
 
 # Read images into a dictionary
@@ -39,7 +59,6 @@ fig, ax = plt.subplots()
 fig.patch.set_facecolor('black')  # Set the figure background to black
 fig.canvas.manager.full_screen_toggle()  # Open in full screen
 
-
 # Function to update the displayed image
 def update_image(img):
     ax.clear()
@@ -47,6 +66,10 @@ def update_image(img):
     ax.axis('off')  # Hide axis
     ax.set_position([0, 0, 1, 1])  # Set left, bottom, right, top to 0, 0, 1, 1
     plt.draw()
+
+# Display the welcome image initially
+update_image(images['welcome_image'])
+plt.pause(2)  # Pause for 2 seconds to display the welcome image
 
 # Connect to Arduino
 arduino = connect_to_arduino('/dev/cu.usbserial-110') or connect_to_arduino('/dev/cu.usbserial-10')

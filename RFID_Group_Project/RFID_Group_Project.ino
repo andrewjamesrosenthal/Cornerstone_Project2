@@ -1,144 +1,330 @@
 #include <SPI.h>
 #include <MFRC522.h>
+#include <Adafruit_NeoPixel.h>  // Include the NeoPixel library
 
-#define SS_PIN 10
-#define RST_PIN 9
-#define GREEN_PIN 3
-#define BLUE_PIN 5
-#define RED_PIN 6
-#define ATOMIZER 8  // Define pin 2 for the additional action
+// RFID reader pins
+#define RST_PIN 7
 
-// Allowed access tags in consistent format
-String allowedTags[] = {
-  "04361D229F6F80",
-  "0415917AE20F29",
-  "0415915A637D29",
-  "41591CA641728",
-  "415915A",
-  "415917A",
-  "41591CA"
+// RFID readers
+#define SS_PIN1 5
+#define SS_PIN2 9
+#define SS_PIN3 10
+
+// NeoPixel LED
+#define LED_PIN 6   // NeoPixel connected to pin 6
+#define NUM_PIXELS 60  // Number of LEDs
+
+Adafruit_NeoPixel pixels(NUM_PIXELS, LED_PIN, NEO_GRB + NEO_KHZ800);
+
+// Button pins
+#define START_BUTTON_PIN 2
+#define ENGLISH_BUTTON_PIN 3
+#define SPANISH_BUTTON_PIN 4
+
+// Game states
+enum GameState {
+  WAITING_FOR_LANGUAGE,
+  LANGUAGE_SELECTED,
+  WAITING_FOR_START,
+  INTRO_PLAYING,
+  GAME_PLAYING,
+  GAME_WON,
+  GAME_RESET
 };
-String tagID = "";
 
-bool cardPresent = false;        // Variable to track card presence
-bool lastAccessGranted = false;  // Track if the last access was granted
+GameState gameState = WAITING_FOR_LANGUAGE;
 
-// Create instances
-MFRC522 mfrc522(SS_PIN, RST_PIN);
+// Language selection
+String selectedLanguage = "";  // "english" or "spanish"
 
-void setup() 
-{
+// Readers and tag names
+const String readerNames[] = {"arctic", "forest", "desert"};
+const String tagNames[] = {"mammoth", "pigeon", "tiger"};
+const String allowedTags[] = {
+  "532BC0F4",  // mammoth
+  "F3DCBFF4",  // pigeon
+  "53E4BFF4"   // tiger
+};
+
+// Create instances for each reader
+MFRC522 reader1(SS_PIN1, RST_PIN);
+MFRC522 reader2(SS_PIN2, RST_PIN);
+MFRC522 reader3(SS_PIN3, RST_PIN);
+
+// Variables to store the current and previous state of each reader
+String arcticTag = "";
+String forestTag = "";
+String desertTag = "";
+
+String prevArcticTag = "";
+String prevForestTag = "";
+String prevDesertTag = "";
+
+bool stormComing = false;  // Flag to indicate storm_coming.png state
+bool ledsActivated = false; // Flag to indicate if LEDs have been activated for current tags
+unsigned long gameWonTime = 0;  // Time when the game was won
+
+void setup() {
   Serial.begin(9600);
   SPI.begin();
-  mfrc522.PCD_Init();
-  delay(4);
 
-  mfrc522.PCD_DumpVersionToSerial();
+  // Initialize RFID readers
+  reader1.PCD_Init();
+  reader2.PCD_Init();
+  reader3.PCD_Init();
+
+  // Initialize NeoPixel
+  pixels.begin();
+  pixels.show(); // Initialize all pixels to 'off'
+
+  // Initialize buttons
+  pinMode(START_BUTTON_PIN, INPUT_PULLUP);
+  pinMode(ENGLISH_BUTTON_PIN, INPUT_PULLUP);
+  pinMode(SPANISH_BUTTON_PIN, INPUT_PULLUP);
+
   Serial.println("--------------------------");
   Serial.println(" Access Control ");
-  Serial.println("Place Your Card on the Reader");
-
-  pinMode(GREEN_PIN, OUTPUT);
-  pinMode(BLUE_PIN, OUTPUT);
-  pinMode(RED_PIN, OUTPUT);
-  pinMode(ATOMIZER, OUTPUT);  // Initialize ACTION_PIN
-  digitalWrite(GREEN_PIN, LOW);
-  digitalWrite(BLUE_PIN, LOW);
-  digitalWrite(RED_PIN, LOW);
-  digitalWrite(ATOMIZER, LOW);
+  Serial.println("Select Language: Press English or Spanish Button");
 }
 
-void loop() 
-{
-  // Prepare buffer for ATQA response
-  byte bufferATQA[2];
-  byte bufferSize = sizeof(bufferATQA);
+void loop() {
+  switch (gameState) {
+    case WAITING_FOR_LANGUAGE:
+      checkLanguageSelection();
+      break;
 
-  // Continuously check for the card using PICC_WakeupA()
-  MFRC522::StatusCode result = mfrc522.PICC_WakeupA(bufferATQA, &bufferSize);
+    case LANGUAGE_SELECTED:
+      checkStartButton();
+      break;
 
-  if (result == MFRC522::STATUS_OK) {
-    // Card is present
-    if (!cardPresent) {
-      cardPresent = true;
+    case WAITING_FOR_START:
+      // This state is handled in checkStartButton()
+      break;
 
-      // Read the tag ID
-      if (mfrc522.PICC_ReadCardSerial()) {
-        tagID = "";
-        for (uint8_t i = 0; i < mfrc522.uid.size; i++) {
-          // Add leading zero if needed to ensure consistent two-character format
-          if (mfrc522.uid.uidByte[i] < 0x10) tagID += "0";
-          tagID += String(mfrc522.uid.uidByte[i], HEX);
-        }
-        tagID.toUpperCase();
+    case INTRO_PLAYING:
+      playIntro();
+      break;
 
-        Serial.print("Tag ID: ");
-        Serial.println(tagID);
+    case GAME_PLAYING:
+      gameLoop();
+      break;
 
-        // Check if the tag is allowed
-        bool accessGranted = false;
-        for (String allowedTag : allowedTags) {
-          if (tagID == allowedTag) {
-            accessGranted = true;
-            break;
-          }
-        }
+    case GAME_WON:
+      handleGameWon();
+      break;
 
-        // Control RGB LED based on access
-        if (accessGranted) {
-          Serial.println(" Access Granted!");
-          digitalWrite(GREEN_PIN, HIGH);
-          digitalWrite(RED_PIN, LOW);
-          digitalWrite(BLUE_PIN, LOW);
-          lastAccessGranted = true;  // Set flag to true
-        } else {
-          Serial.println(" Access Denied!");
-          digitalWrite(GREEN_PIN, LOW);
-          digitalWrite(RED_PIN, HIGH);
-          digitalWrite(BLUE_PIN, LOW);
-          lastAccessGranted = false;  // Ensure flag is false
-        }
+    case GAME_RESET:
+      resetGame();
+      break;
+  }
+}
 
-        Serial.println("--------------------------");
-      }
+void checkLanguageSelection() {
+  if (digitalRead(ENGLISH_BUTTON_PIN) == LOW) {
+    selectedLanguage = "english";
+    gameState = LANGUAGE_SELECTED;
+    Serial.println("English selected.");
+    delay(500);  // Debounce delay
+  } else if (digitalRead(SPANISH_BUTTON_PIN) == LOW) {
+    selectedLanguage = "spanish";
+    gameState = LANGUAGE_SELECTED;
+    Serial.println("Spanish selected.");
+    delay(100);  // Debounce delay
+  }
+}
+
+void checkStartButton() {
+  Serial.println("Press Start Button to Begin the Game.");
+  gameState = WAITING_FOR_START;
+
+  while (gameState == WAITING_FOR_START) {
+    if (digitalRead(START_BUTTON_PIN) == LOW) {
+      Serial.println("Start button pressed.");
+      gameState = INTRO_PLAYING;
+      delay(500);  // Debounce delay
     }
-  } else {
-    // No card detected
-    if (cardPresent) {
-      cardPresent = false;
-      Serial.println("RFID chip is no longer on the reader.");
-      // Turn off RGB LED
-      digitalWrite(GREEN_PIN, LOW);
-      digitalWrite(RED_PIN, LOW);
-      digitalWrite(BLUE_PIN, LOW);
-      Serial.println("Place Your Card on the Reader");
+  }
+}
 
-      // If last access was granted, perform the delayed action
-      if (lastAccessGranted) {
-        delay(1000);  // Wait for 5 seconds
+void playIntro() {
+  for (int i = 2; i <= 10; i++) {
+    Serial.println(selectedLanguage + "_intro_" + String(i)+"_image");
+    delay(3000);  // 3-second delay between messages
+  }
+  gameState = GAME_PLAYING;
+}
 
-        // Turn RGB LED to purple (red + blue)
-        digitalWrite(RED_PIN, HIGH);
-        digitalWrite(BLUE_PIN, HIGH);
-        digitalWrite(GREEN_PIN, LOW);
-        digitalWrite(ATOMIZER, HIGH);
-        delay(10000);
+void gameLoop() {
+  checkReader(reader1, "arctic", arcticTag, prevArcticTag);
+  checkReader(reader2, "forest", forestTag, prevForestTag);
+  checkReader(reader3, "desert", desertTag, prevDesertTag);
 
+  if (newTagDetected()) {
+    ledsActivated = false; // Reset the flag when a new tag is detected
+  }
 
-       digitalWrite(ATOMIZER, LOW);
-
-
-        // Turn off RGB LED
-        digitalWrite(RED_PIN, LOW);
-        digitalWrite(BLUE_PIN, LOW);
-        digitalWrite(GREEN_PIN, LOW);
-
-        lastAccessGranted = false;  // Reset the flag
-      }
+  if (!ledsActivated) {
+    checkWin();     // Check if the win condition is met first
+    if (!ledsActivated) { // If win condition didn't set ledsActivated
+      validateTags();
     }
   }
 
-  // Halt the PICC to allow it to be detected again
-  mfrc522.PICC_HaltA();
-  mfrc522.PCD_StopCrypto1();
+  checkStorm();   // Check if all RFID readers are empty
+}
+
+void handleGameWon() {
+  if (millis() - gameWonTime >= 10000) {  // Wait 10 seconds after winning
+    gameState = GAME_RESET;
+  }
+}
+
+void resetGame() {
+  // Reset all variables to initial state
+  arcticTag = "";
+  forestTag = "";
+  desertTag = "";
+  prevArcticTag = "";
+  prevForestTag = "";
+  prevDesertTag = "";
+  stormComing = false;
+  ledsActivated = false;
+  selectedLanguage = "";
+  gameWonTime = 0;
+
+  Serial.println("Game will reset now.");
+  Serial.println("Select Language: Press English or Spanish Button");
+
+  gameState = WAITING_FOR_LANGUAGE;
+}
+
+void checkReader(MFRC522 &reader, String readerName, String &currentTag, String &prevTag) {
+  if (reader.PICC_IsNewCardPresent()) {
+    if (!reader.PICC_ReadCardSerial())
+      return;
+
+    String tagID = "";
+    for (uint8_t i = 0; i < reader.uid.size; i++) {
+      if (reader.uid.uidByte[i] < 0x10) tagID += "0";
+      tagID += String(reader.uid.uidByte[i], HEX);
+    }
+    tagID.toUpperCase();
+
+    // Update the current tag based on the reader
+    currentTag = tagID;
+
+    // Determine tag name
+    String tagName = "";
+    for (int i = 0; i < 3; i++) {
+      if (tagID == allowedTags[i]) {
+        tagName = tagNames[i];
+        break;
+      }
+    }
+
+    if (tagName != "") {
+      Serial.println(tagName + "_" + readerName + "_image");
+    } else {
+      Serial.println("Unknown tag detected at " + readerName + " | ID: " + tagID);
+    }
+
+    Serial.println("--------------------------");
+    reader.PICC_HaltA();
+  } else {
+    currentTag = ""; // No tag present
+  }
+}
+
+bool newTagDetected() {
+  // Check if any of the current tags are different from the previous tags
+  bool newTag = (arcticTag != prevArcticTag) || (forestTag != prevForestTag) || (desertTag != prevDesertTag);
+
+  // Update previous tags
+  prevArcticTag = arcticTag;
+  prevForestTag = forestTag;
+  prevDesertTag = desertTag;
+
+  return newTag;
+}
+
+void validateTags() {
+  // Start with LEDs off
+  turnOffLEDs();
+
+  // Check if win condition is met to avoid conflicting LED signals
+  if (arcticTag == allowedTags[0] && forestTag == allowedTags[1] && desertTag == allowedTags[2]) {
+    ledsActivated = true;
+    return;
+  }
+
+  // Check each reader-tag pairing
+  bool correctArctic = (arcticTag == "" || arcticTag == allowedTags[0]);
+  bool correctForest = (forestTag == "" || forestTag == allowedTags[1]);
+  bool correctDesert = (desertTag == "" || desertTag == allowedTags[2]);
+
+  // Incorrect assignment
+  if ((!correctArctic && arcticTag != "") || (!correctForest && forestTag != "") || (!correctDesert && desertTag != "")) {
+    turnRedLED(); // Incorrect tag on any reader
+    delay(3000);
+    turnOffLEDs();
+    ledsActivated = true; // LEDs have been activated for current tags
+  }
+  // All correct assignments (but not win condition yet)
+  else if ((arcticTag != "" || forestTag != "" || desertTag != "") && !stormComing) {
+    turnGreenLED(); // Correct assignments
+    delay(3000);
+    turnOffLEDs();
+    ledsActivated = true; // LEDs have been activated for current tags
+  }
+}
+
+void checkWin() {
+  if (arcticTag == allowedTags[0] && forestTag == allowedTags[1] && desertTag == allowedTags[2]) {
+    ledsActivated = true; // LEDs have been activated for current tags
+    if (!stormComing) {  // Ensure storm logic runs only once
+      Serial.println("win_image");
+      turnPurpleLED(); // Turn purple for win condition
+      delay(5000);
+      turnOffLEDs();   // Turn off LEDs after displaying purple
+      Serial.println("storm.png");
+      stormComing = true;  // Set flag to true
+      gameWonTime = millis();
+      gameState = GAME_WON;
+    }
+  }
+}
+
+void checkStorm() {
+  if (stormComing && arcticTag == "" && forestTag == "" && desertTag == "") {
+    Serial.println("storm.png");
+    stormComing = false;  // Reset storm logic for future cycles
+    turnOffLEDs();
+  }
+}
+
+// Helper Functions for LED Control
+void turnOffLEDs() {
+  pixels.clear();
+  pixels.show();
+}
+
+void turnRedLED() {
+  for (int i = 0; i < NUM_PIXELS; i++) {
+    pixels.setPixelColor(i, pixels.Color(255, 0, 0)); // Red color
+  }
+  pixels.show();
+}
+
+void turnGreenLED() {
+  for (int i = 0; i < NUM_PIXELS; i++) {
+    pixels.setPixelColor(i, pixels.Color(0, 255, 0)); // Green color
+  }
+  pixels.show();
+}
+
+void turnPurpleLED() {
+  for (int i = 0; i < NUM_PIXELS; i++) {
+    pixels.setPixelColor(i, pixels.Color(128, 0, 128)); // Purple color
+  }
+  pixels.show();
 }
