@@ -3,15 +3,25 @@
 
 #define SS_PIN 10
 #define RST_PIN 9
-#define BLUE_LED_PIN 6
-#define RED_LED_PIN 7
+#define GREEN_PIN 3
+#define BLUE_PIN 5
+#define RED_PIN 6
+#define ATOMIZER 8  // Define pin 2 for the additional action
 
-byte readCard[4];
 // Allowed access tags in consistent format
-String allowedTags[] = {"0415917AE20F29", "0415915A637D29", "41591CA641728", "415915A", "415917A", "41591CA"};
+String allowedTags[] = {
+  "04361D229F6F80",
+  "0415917AE20F29",
+  "0415915A637D29",
+  "41591CA641728",
+  "415915A",
+  "415917A",
+  "41591CA"
+};
 String tagID = "";
 
-bool cardPresent = false; // Variable to track card presence
+bool cardPresent = false;        // Variable to track card presence
+bool lastAccessGranted = false;  // Track if the last access was granted
 
 // Create instances
 MFRC522 mfrc522(SS_PIN, RST_PIN);
@@ -28,10 +38,14 @@ void setup()
   Serial.println(" Access Control ");
   Serial.println("Place Your Card on the Reader");
 
-  pinMode(BLUE_LED_PIN, OUTPUT);
-  pinMode(RED_LED_PIN, OUTPUT);
-  digitalWrite(BLUE_LED_PIN, LOW);
-  digitalWrite(RED_LED_PIN, LOW);
+  pinMode(GREEN_PIN, OUTPUT);
+  pinMode(BLUE_PIN, OUTPUT);
+  pinMode(RED_PIN, OUTPUT);
+  pinMode(ATOMIZER, OUTPUT);  // Initialize ACTION_PIN
+  digitalWrite(GREEN_PIN, LOW);
+  digitalWrite(BLUE_PIN, LOW);
+  digitalWrite(RED_PIN, LOW);
+  digitalWrite(ATOMIZER, LOW);
 }
 
 void loop() 
@@ -70,15 +84,19 @@ void loop()
           }
         }
 
-        // Control LEDs based on access
+        // Control RGB LED based on access
         if (accessGranted) {
           Serial.println(" Access Granted!");
-          digitalWrite(BLUE_LED_PIN, HIGH);
-          digitalWrite(RED_LED_PIN, LOW);
+          digitalWrite(GREEN_PIN, HIGH);
+          digitalWrite(RED_PIN, LOW);
+          digitalWrite(BLUE_PIN, LOW);
+          lastAccessGranted = true;  // Set flag to true
         } else {
           Serial.println(" Access Denied!");
-          digitalWrite(BLUE_LED_PIN, LOW);
-          digitalWrite(RED_LED_PIN, HIGH);
+          digitalWrite(GREEN_PIN, LOW);
+          digitalWrite(RED_PIN, HIGH);
+          digitalWrite(BLUE_PIN, LOW);
+          lastAccessGranted = false;  // Ensure flag is false
         }
 
         Serial.println("--------------------------");
@@ -89,10 +107,34 @@ void loop()
     if (cardPresent) {
       cardPresent = false;
       Serial.println("RFID chip is no longer on the reader.");
-      // Turn off LEDs
-      digitalWrite(BLUE_LED_PIN, LOW);
-      digitalWrite(RED_LED_PIN, LOW);
+      // Turn off RGB LED
+      digitalWrite(GREEN_PIN, LOW);
+      digitalWrite(RED_PIN, LOW);
+      digitalWrite(BLUE_PIN, LOW);
       Serial.println("Place Your Card on the Reader");
+
+      // If last access was granted, perform the delayed action
+      if (lastAccessGranted) {
+        delay(1000);  // Wait for 5 seconds
+
+        // Turn RGB LED to purple (red + blue)
+        digitalWrite(RED_PIN, HIGH);
+        digitalWrite(BLUE_PIN, HIGH);
+        digitalWrite(GREEN_PIN, LOW);
+        digitalWrite(ATOMIZER, HIGH);
+        delay(10000);
+
+
+       digitalWrite(ATOMIZER, LOW);
+
+
+        // Turn off RGB LED
+        digitalWrite(RED_PIN, LOW);
+        digitalWrite(BLUE_PIN, LOW);
+        digitalWrite(GREEN_PIN, LOW);
+
+        lastAccessGranted = false;  // Reset the flag
+      }
     }
   }
 
