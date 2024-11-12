@@ -1,59 +1,71 @@
-import tkinter as tk
-from PIL import Image, ImageTk
-import os
+import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
+import serial
+import time
 
-# Suppress Tkinter warning
-os.environ["TK_SILENCE_DEPRECATION"] = "1"
+# Specify the path to your images
+image_paths = {
+    'mammoth_arctic_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/mammotharctic.png',
+    'mammoth_forest_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/mammothforest.png',
+    'mammoth_desert_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/mammothdesert.png',
+    'pigeon_arctic_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/pigeonarctic.png',
+    'pigeon_forest_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/pigeonforest.png',
+    'pigeon_desert_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/pigeondesert.png',
+    'tiger_arctic_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/tigerarctic.png',
+    'tiger_forest_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/tigerforest.png',
+    'tiger_desert_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/tigerdesert.png',
+    'storm_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/storm.png'
+}
 
-# Define paths to images
-image1_path = "/Users/andrewrosenthal/Cornerstone_Project2/image1.png"
-image2_path = "/Users/andrewrosenthal/Cornerstone_Project2/image2.png"
+# Read images into a dictionary
+images = {}
+for name, path in image_paths.items():
+    images[name] = mpimg.imread(path)
+    print(f"Loaded image: {name} from {path}")
 
-# Check if images exist
-if not (os.path.exists(image1_path) and os.path.exists(image2_path)):
-    raise FileNotFoundError("One or both image files were not found.")
+# Set up the serial connection
+def connect_to_arduino(port, baudrate=9600):
+    try:
+        arduino = serial.Serial(port=port, baudrate=baudrate, timeout=1)
+        print(f"Connected to Arduino on port {port}")
+        return arduino
+    except serial.SerialException as e:
+        print(f"Failed to connect to Arduino: {e}")
+        return None
 
-# Create main Tkinter window
-root = tk.Tk()
-root.title("Image Switcher")
-
-# Function to resize image to fit the window
-
-
-def resize_image(image, max_width, max_height):
-    img_width, img_height = image.size
-    scale = min(max_width / img_width, max_height / img_height, 1)
-    return image.resize((int(img_width * scale), int(img_height * scale)), Image.Resampling.LANCZOS)
-
-
-# Load and resize images
-max_width, max_height = 800, 600  # Adjust as needed
-img1 = resize_image(Image.open(image1_path), max_width, max_height)
-img2 = resize_image(Image.open(image2_path), max_width, max_height)
-
-# Convert images for Tkinter
-photo1 = ImageTk.PhotoImage(img1)
-photo2 = ImageTk.PhotoImage(img2)
-
-# Create a label to display images
-label = tk.Label(root)
-label.pack()
-
-# Track current image
-# Use a list to allow modification inside a nested function
-current_image = [photo1]
-
-# Function to switch images
+# Create a figure and axis with full screen
+plt.rcParams['toolbar'] = 'None'
+fig, ax = plt.subplots()
+fig.patch.set_facecolor('black')  # Set the figure background to black
+fig.canvas.manager.full_screen_toggle()  # Open in full screen
 
 
-def switch_images():
-    current_image[0] = photo1 if current_image[0] == photo2 else photo2
-    label.config(image=current_image[0])
-    root.after(2000, switch_images)  # Schedule the next switch in 2 seconds
+# Function to update the displayed image
+def update_image(img):
+    ax.clear()
+    ax.imshow(img)
+    ax.axis('off')  # Hide axis
+    ax.set_position([0, 0, 1, 1])  # Set left, bottom, right, top to 0, 0, 1, 1
+    plt.draw()
 
+# Connect to Arduino
+arduino = connect_to_arduino('/dev/cu.usbserial-110') or connect_to_arduino('/dev/cu.usbserial-10')
 
-# Start the image switching
-switch_images()
-
-# Run the Tkinter event loop
-root.mainloop()
+# Display images based on Arduino input
+if arduino:
+    try:
+        while True:
+            # Read data from Arduino
+            data = arduino.readline().decode('utf-8').strip()
+            if data and data in images:
+                print(f"Displaying: {data}")
+                update_image(images[data])
+                plt.pause(2)  # Pause for 2 seconds
+            else:
+                print(f"Unknown command or no data received: {data}")
+    except KeyboardInterrupt:
+        print("Exiting program.")
+    except Exception as e:
+        print(f"Error: {e}")
+    finally:
+        arduino.close()
