@@ -2,20 +2,35 @@ import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import serial
 import time
+import pygame
 
-# Specify the path to your images
+# Specify the path to your images and sounds
 image_paths = {
-    'mammoth_arctic_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/mammotharctic.png',
-    'mammoth_forest_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/mammothforest.png',
-    'mammoth_desert_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/mammothdesert.png',
-    'pigeon_arctic_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/pigeonarctic.png',
-    'pigeon_forest_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/pigeonforest.png',
-    'pigeon_desert_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/pigeondesert.png',
-    'tiger_arctic_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/tigerarctic.png',
-    'tiger_forest_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/tigerforest.png',
-    'tiger_desert_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/tigerdesert.png',
+    'english_mammoth_arctic_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/englishmammotharctic.png',
+    'english_mammoth_forest_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/englishmammothforest.png',
+    'english_mammoth_desert_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/englishmammothdesert.png',
+    'english_pigeon_arctic_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/englishpigeonarctic.png',
+    'english_pigeon_forest_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/englishpigeonforest.png',
+    'english_pigeon_desert_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/englishpigeondesert.png',
+    'english_tiger_arctic_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/englishtigerarctic.png',
+    'english_tiger_forest_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/englishtigerforest.png',
+    'english_tiger_desert_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/englishtigerdesert.png',
+
+    'spanish_mammoth_arctic_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/spanishmammotharctic.png',
+    'spanish_mammoth_forest_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/spanishmammothforest.png',
+    'spanish_mammoth_desert_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/spanishmammothdesert.png',
+    'spanish_pigeon_arctic_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/spanishpigeonarctic.png',
+    'spanish_pigeon_forest_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/spanishpigeonforest.png',
+    'spanish_pigeon_desert_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/spanishpigeondesert.png',
+    'spanish_tiger_arctic_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/spanishtigerarctic.png',
+    'spanish_tiger_forest_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/spanishtigerforest.png',
+    'spanish_tiger_desert_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/spanishtigerdesert.png',
+
     'storm_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/storm.png',
-    'win_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/win.png',
+    'english_win_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/english_win.png',
+    'spanish_win_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/spanish_win.png',
+
+    'english_intro_1_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/english_intro_1.jpeg',
     'english_intro_2_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/english_intro_2.jpeg',
     'english_intro_3_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/english_intro_3.jpeg',
     'english_intro_4_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/english_intro_4.jpeg',
@@ -24,7 +39,8 @@ image_paths = {
     'english_intro_7_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/english_intro_7.jpeg',
     'english_intro_8_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/english_intro_8.jpeg',
     'english_intro_9_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/english_intro_9.jpeg',
-    'english_intro_10_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/english_intro_10.jpeg',
+
+    'spanish_intro_1_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/spanish_intro_1.jpeg',
     'spanish_intro_2_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/spanish_intro_2.jpeg',
     'spanish_intro_3_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/spanish_intro_3.jpeg',
     'spanish_intro_4_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/spanish_intro_4.jpeg',
@@ -33,8 +49,16 @@ image_paths = {
     'spanish_intro_7_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/spanish_intro_7.jpeg',
     'spanish_intro_8_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/spanish_intro_8.jpeg',
     'spanish_intro_9_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/spanish_intro_9.jpeg',
-    'spanish_intro_1_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/spanish_intro_1.jpeg',
-    'welcome_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/welcome.jpeg'
+    
+    'welcome_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/welcome.jpeg',
+    'game_start_spanish_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/game_start_spanish.png',
+    'game_start_english_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/game_start_english.png'
+}
+
+sound_paths = {
+    'english_win_image': '/Users/andrewrosenthal/Cornerstone_Project2/sounds/english_win.mp3',
+    'spanish_win_image': '/Users/andrewrosenthal/Cornerstone_Project2/sounds/spanish_win.mp3',
+
 }
 
 # Read images into a dictionary
@@ -66,15 +90,28 @@ def update_image(img):
     ax.axis('off')  # Hide axis
     ax.set_position([0, 0, 1, 1])  # Set left, bottom, right, top to 0, 0, 1, 1
     plt.draw()
+    plt.pause(0.1)  # Add a short pause to ensure the image is updated
 
-# Display the welcome image initially
-update_image(images['welcome_image'])
-plt.pause(2)  # Pause for 2 seconds to display the welcome image
+# Function to play sound
+def play_sound(sound_path):
+    try:
+        # Initialize the mixer
+        pygame.mixer.init()
+        pygame.mixer.music.load(sound_path)
+
+        print(f"Playing sound: {sound_path}")
+        pygame.mixer.music.play()
+
+        # Wait until the sound finishes playing
+        while pygame.mixer.music.get_busy():
+            time.sleep(0.1)
+    except Exception as e:
+        print(f"Error playing sound: {e}")
 
 # Connect to Arduino
 arduino = connect_to_arduino('/dev/cu.usbserial-110') or connect_to_arduino('/dev/cu.usbserial-10')
 
-# Display images based on Arduino input
+# Display images and play sounds based on Arduino input
 if arduino:
     try:
         while True:
@@ -83,12 +120,15 @@ if arduino:
             if data and data in images:
                 print(f"Displaying: {data}")
                 update_image(images[data])
-                plt.pause(2)  # Pause for 2 seconds
+                if data in sound_paths:
+                    print(f"Playing sound for: {data}")
+                    play_sound(sound_paths[data])
+                #plt.pause(2)  # Pause for 2 seconds
             else:
                 print(f"Unknown command or no data received: {data}")
-    except KeyboardInterrupt:
-        print("Exiting program.")
-    except Exception as e:
-        print(f"Error: {e}")
+    # except KeyboardInterrupt:
+    #     print("Exiting program.")
+    # except Exception as e:
+    #     print(f"Error: {e}")
     finally:
         arduino.close()
