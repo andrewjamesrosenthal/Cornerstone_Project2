@@ -42,6 +42,8 @@ String selectedLanguage = "";  // "english" or "spanish"
 // Readers and tag names
 const String readerNames[] = { "arctic", "forest", "desert" };
 const String tagNames[] = { "mammoth", "pigeon", "tiger" };
+
+// Update allowedTags to match your actual tag IDs (ensure they are uppercase)
 const String allowedTags[] = {
   "532BC0F4",  // mammoth
   "F3DCBFF4",  // pigeon
@@ -64,6 +66,7 @@ String prevDesertTag = "";
 
 bool ledsActivated = false;     // Flag to indicate if LEDs have been activated for current tags
 unsigned long gameWonTime = 0;  // Time when the game was won
+bool welcomeDisplayed = false;  // Flag to track if the welcome image was displayed
 
 void setup() {
   Serial.begin(9600);
@@ -93,7 +96,10 @@ void setup() {
 }
 
 void loop() {
-  Serial.println("welcome_image");
+  if (!welcomeDisplayed) {
+    Serial.println("welcome_image");
+    welcomeDisplayed = true;  // Set the flag to true after displaying the message
+  }
   switch (gameState) {
     case WAITING_FOR_LANGUAGE:
       checkLanguageSelection();
@@ -171,8 +177,6 @@ void gameLoop() {
       validateTags();
     }
   }
-
-  // Removed checkStorm() call since storm logic is now handled within checkWin()
 }
 
 void resetGame() {
@@ -217,6 +221,9 @@ void checkReader(MFRC522 &reader, String readerName, String &currentTag, String 
     }
     tagID.toUpperCase();
 
+    // Debug: Print the tag ID being read
+    Serial.println("Reader: " + readerName + " | Tag ID: " + tagID);
+
     // Update the current tag based on the reader
     currentTag = tagID;
 
@@ -232,7 +239,7 @@ void checkReader(MFRC522 &reader, String readerName, String &currentTag, String 
     // Only print messages when a new tag is detected
     if (currentTag != prevTag) {
       if (tagName != "") {
-        Serial.println(languageSelected + "_" + tagName + "_" + readerName + "_image");
+        Serial.println(selectedLanguage + "_" + tagName + "_" + readerName + "_image");
       } else {
         Serial.println("Unknown tag detected at " + readerName + " | ID: " + tagID);
       }
@@ -259,6 +266,11 @@ bool newTagDetected() {
   prevForestTag = forestTag;
   prevDesertTag = desertTag;
 
+  // Debug: Print when a new tag is detected
+  if (newTag) {
+    Serial.println("New tag detected. LEDs reset.");
+  }
+
   return newTag;
 }
 
@@ -267,7 +279,7 @@ void validateTags() {
   turnOffLEDs();
 
   // Check if win condition is met to avoid conflicting LED signals
-  if (arcticTag == allowedTags[0] && forestTag == allowedTags[1] && desertTag == allowedTags[2]) {
+  if (arcticTag == allowedTags[0] && forestTag == "53E4BFF4" && desertTag == allowedTags[2]) {
     ledsActivated = true;
     return;
   }
@@ -294,8 +306,17 @@ void validateTags() {
 }
 
 void checkWin() {
-  if (arcticTag == allowedTags[0] && forestTag == allowedTags[1] && desertTag == allowedTags[2]) {
+  Serial.println("Checking win condition...");
+  Serial.println("ArcticTag: " + arcticTag + " | Expected: " + allowedTags[0]);
+  Serial.println("ForestTag: " + forestTag + " | Expected: " + allowedTags[1]);
+  Serial.println("DesertTag: " + desertTag + " | Expected: " + allowedTags[2]);
+
+  if (arcticTag == "532BC0F4" && forestTag == "F3DCBFF4" && desertTag == "53E4BFF4") {
     ledsActivated = true;  // LEDs have been activated for current tags
+  // "F3DCBFF4",  // pigeon
+  // "53E4BFF4"   // tiger
+  // "532BC0F4"   // Mammoth
+
 
     // Win logic handled here
     Serial.println(selectedLanguage + "_win_image");

@@ -90,7 +90,7 @@ def update_image(img):
     ax.axis('off')  # Hide axis
     ax.set_position([0, 0, 1, 1])  # Set left, bottom, right, top to 0, 0, 1, 1
     plt.draw()
-    plt.pause(0.1)  # Add a short pause to ensure the image is updated
+    plt.pause(3)  # Add a short pause to ensure the image is updated
 
 # Function to play sound
 def play_sound(sound_path):
