@@ -13,13 +13,14 @@
 // NeoPixel LED
 #define LED_PIN 6      // NeoPixel connected to pin 6
 #define NUM_PIXELS 60  // Number of LEDs
+// Button pins
+#define START_CONTINUE_BUTTON_PIN 2
+#define ENGLISH_BUTTON_PIN 3
+#define SPANISH_BUTTON_PIN 4
 
 Adafruit_NeoPixel pixels(NUM_PIXELS, LED_PIN, NEO_GRB + NEO_KHZ800);
 
-// Button pins
-#define START_BUTTON_PIN 2
-#define ENGLISH_BUTTON_PIN 3
-#define SPANISH_BUTTON_PIN 4
+
 
 // Output pins (e.g., for ATOMIZER)
 #define ATOMIZER 8  // Define the ATOMIZER pin (update as per your hardware setup)
@@ -27,20 +28,21 @@ Adafruit_NeoPixel pixels(NUM_PIXELS, LED_PIN, NEO_GRB + NEO_KHZ800);
 // Game states
 enum GameState {
   WAITING_FOR_LANGUAGE,
-  LANGUAGE_SELECTED,
   WAITING_FOR_START,
   INTRO_PLAYING,
   GAME_PLAYING,
+  WIN_STATE,
   GAME_RESET
+
 };
 
-GameState gameState = WAITING_FOR_LANGUAGE;
+GameState gameState = WIN_STATE;
 
 // Language selection
-String selectedLanguage = "";  // "english" or "spanish"
+String selectedLanguage = english ";  // " english " or " spanish "
 
-// Readers and tag names
-const String readerNames[] = { "arctic", "forest", "desert" };
+  // Readers and tag names
+  const String readerNames[] = { "arctic", "forest", "desert" };
 const String tagNames[] = { "mammoth", "pigeon", "tiger" };
 
 // Update allowedTags to match your actual tag IDs (ensure they are uppercase)
@@ -82,7 +84,7 @@ void setup() {
   pixels.show();  // Initialize all pixels to 'off'
 
   // Initialize buttons
-  pinMode(START_BUTTON_PIN, INPUT_PULLUP);
+  pinMode(START_CONTINUE_BUTTON_PIN, INPUT_PULLUP);
   pinMode(ENGLISH_BUTTON_PIN, INPUT_PULLUP);
   pinMode(SPANISH_BUTTON_PIN, INPUT_PULLUP);
 
@@ -105,12 +107,8 @@ void loop() {
       checkLanguageSelection();
       break;
 
-    case LANGUAGE_SELECTED:
-      checkStartButton();
-      break;
-
     case WAITING_FOR_START:
-      // This state is handled in checkStartButton()
+      checkStartButton();
       break;
 
     case INTRO_PLAYING:
@@ -119,6 +117,10 @@ void loop() {
 
     case GAME_PLAYING:
       gameLoop();
+      break;
+
+    case WIN_STATE:
+      handleWinState();
       break;
 
     case GAME_RESET:
@@ -130,12 +132,12 @@ void loop() {
 void checkLanguageSelection() {
   if (digitalRead(ENGLISH_BUTTON_PIN) == LOW) {
     selectedLanguage = "english";
-    gameState = LANGUAGE_SELECTED;
+    gameState = WAITING_FOR_START;
     Serial.println("game_start_english_image");
     delay(100);  // Debounce delay
   } else if (digitalRead(SPANISH_BUTTON_PIN) == LOW) {
     selectedLanguage = "spanish";
-    gameState = LANGUAGE_SELECTED;
+    gameState = WAITING_FOR_START;
     Serial.println("game_start_spanish_image");
     delay(100);  // Debounce delay
   }
@@ -146,7 +148,7 @@ void checkStartButton() {
   gameState = WAITING_FOR_START;
 
   while (gameState == WAITING_FOR_START) {
-    if (digitalRead(START_BUTTON_PIN) == LOW) {
+    if (digitalRead(START_CONTINUE_BUTTON_PIN) == LOW) {
       Serial.println("Start button pressed.");
       gameState = INTRO_PLAYING;
       delay(100);  // Debounce delay
@@ -157,7 +159,11 @@ void checkStartButton() {
 void playIntro() {
   for (int i = 2; i <= 10; i++) {
     Serial.println(selectedLanguage + "_intro_" + String(i) + "_image");
-    delay(3000);  // 3-second delay between messages
+    delay(3000);  // 3-second delay before waiting for button press
+
+    //Doesn't continue until the Continue button is pressed
+    while (digitalRead(START_CONTINUE_BUTTON_PIN) == HIGH) {
+    }
   }
   gameState = GAME_PLAYING;
 }
@@ -180,6 +186,29 @@ void gameLoop() {
 }
 
 void resetGame() {
+  turnPurpleLED();  // Turn all LEDs purple
+
+  // Display "storm coming" image based on the selected language
+  Serial.println(selectedLanguage + "_storm_coming_image");
+  Serial.println(selectedLanguage + "_storm_coming_sound");
+
+  while (arcticTag != "" || forestTag != "" || desertTag != "") {
+    checkReader(reader1, "arctic", arcticTag, prevArcticTag);
+    checkReader(reader2, "forest", forestTag, prevForestTag);
+    checkReader(reader3, "desert", desertTag, prevDesertTag);
+    delay(500);  // Small delay to prevent overloading the loop
+  }
+
+  // Delay for 3 seconds after all tags are removed
+  delay(3000);
+
+  Serial.println("storm_image");
+
+  digitalWrite(ATOMIZER, HIGH);  // Turn on the atomizer
+  delay(10000);                  // Keep it on for 10 seconds
+  digitalWrite(ATOMIZER, LOW);   // Turn off the atomizer
+  turnOffLEDs();                 // Turn off all LEDs
+  Serial.println("Game Has Reset");
   // Reset all variables to initial state
   arcticTag = "";
   forestTag = "";
@@ -190,16 +219,11 @@ void resetGame() {
   ledsActivated = false;
   selectedLanguage = "";
   gameWonTime = 0;
-
-  // Turn off any outputs
-  digitalWrite(ATOMIZER, LOW);
-  turnOffLEDs();
-
-  Serial.println("Game will reset now.");
-  Serial.println("Select Language: Press English or Spanish Button");
-
+  welcomeDisplayed = false;  // Reset the welcome display flag
+  // Reset the game state to start over
   gameState = WAITING_FOR_LANGUAGE;
 }
+
 
 void checkReader(MFRC522 &reader, String readerName, String &currentTag, String &prevTag) {
   MFRC522::StatusCode status;
@@ -305,29 +329,16 @@ void validateTags() {
   }
 }
 
+// Update checkWin to transition to WIN_STATE
 void checkWin() {
   Serial.println("Checking win condition...");
   Serial.println("ArcticTag: " + arcticTag + " | Expected: " + allowedTags[0]);
   Serial.println("ForestTag: " + forestTag + " | Expected: " + allowedTags[1]);
   Serial.println("DesertTag: " + desertTag + " | Expected: " + allowedTags[2]);
 
-  if (arcticTag == "532BC0F4" && forestTag == "F3DCBFF4" && desertTag == "53E4BFF4") {
-    ledsActivated = true;  // LEDs have been activated for current tags
-  // "F3DCBFF4",  // pigeon
-  // "53E4BFF4"   // tiger
-  // "532BC0F4"   // Mammoth
-
-
-    // Win logic handled here
-    Serial.println(selectedLanguage + "_win_image");
-    delay(7000);
-    turnPurpleLED();  // Turn purple for win condition
-    delay(5000);
-    Serial.println("storm_image");
-    digitalWrite(ATOMIZER, HIGH);  // Activate the atomizer or any other output
-    delay(10000);
-    digitalWrite(ATOMIZER, LOW);  // Turn off the atomizer
-    gameState = GAME_RESET;
+  if (arcticTag == allowedTags[0] && forestTag == allowedTags[1] && desertTag == allowedTags[2]) {
+    ledsActivated = true;   // Prevent further LED updates
+    gameState = WIN_STATE;  // Transition to WIN_STATE
   }
 }
 
@@ -335,6 +346,14 @@ void checkWin() {
 void turnOffLEDs() {
   pixels.clear();
   pixels.show();
+}
+//Play Win Sounds after set time go to RESET GAME
+void handleWinState() {
+  Serial.println(selectedLanguage + "_win_image");
+  //Turn on LEDs to a set color
+  Serial.println("win_sound")
+    delay(5000);
+  gameState = GAME_RESET;  // Transition to reset state
 }
 
 void turnRedLED() {

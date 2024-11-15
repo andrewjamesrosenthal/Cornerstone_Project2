@@ -52,7 +52,10 @@ image_paths = {
     
     'welcome_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/welcome.jpeg',
     'game_start_spanish_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/game_start_spanish.png',
-    'game_start_english_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/game_start_english.png'
+    'game_start_english_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/game_start_english.png',
+
+    'english_storm_coming_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/english_storm_coming.png',
+    #'spanish_storm_coming_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/spanish_storm_coming.png',
 }
 
 sound_paths = {
