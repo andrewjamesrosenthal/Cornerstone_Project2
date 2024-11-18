@@ -34,6 +34,7 @@ enum GameState {
   GAME_RESET
 };
 
+bool welcomeMessageShown = false;
 GameState gameState = WAITING_FOR_LANGUAGE;
 
 // Language selection
@@ -64,6 +65,11 @@ String prevArcticTag = "";
 String prevForestTag = "";
 String prevDesertTag = "";
 
+// Variables to store the last processed tag for each biome
+String lastProcessedArcticTag = "";
+String lastProcessedForestTag = "";
+String lastProcessedDesertTag = "";
+
 // Variables to track if questions have been asked
 bool mammothQuestionAsked = false;
 bool pigeonQuestionAsked = false;
@@ -87,8 +93,6 @@ void setup() {
   pinMode(BLUE_BUTTON_PIN, INPUT_PULLUP);
   pinMode(RED_BUTTON_PIN, INPUT_PULLUP);
   pinMode(YELLOW_BUTTON_PIN, INPUT_PULLUP);
-  pinMode(RED_BUTTON_PIN, INPUT_PULLUP);
-  pinMode(YELLOW_BUTTON_PIN, INPUT_PULLUP);
 
   // Initialize output pins
   pinMode(ATOMIZER, OUTPUT);
@@ -100,13 +104,12 @@ void setup() {
 }
 
 void loop() {
-  static bool welcomeDisplayed = false;
-  if (!welcomeDisplayed) {
-    Serial.println("welcome_image");
-    welcomeDisplayed = true;  // Set the flag to true after displaying the message
-  }
   switch (gameState) {
     case WAITING_FOR_LANGUAGE:
+      if (!welcomeMessageShown) {
+        Serial.println("welcome_image");
+        welcomeMessageShown = true;  // Mark as shown
+      }
       checkLanguageSelection();
       break;
 
@@ -127,6 +130,7 @@ void loop() {
       break;
 
     case GAME_RESET:
+      welcomeMessageShown = false;  // Reset the flag
       resetGame();
       break;
   }
@@ -162,7 +166,7 @@ void checkStartButton() {
 void playIntro() {
   for (int i = 2; i <= 10; i++) {
     Serial.println(selectedLanguage + "_intro_" + String(i) + "_image");
-    delay(3000);  // 3-second delay before waiting for button press
+    // For Testing only delay(3000);  // 3-second delay before waiting for button press
 
     // Doesn't continue until the Continue button is pressed
     while (digitalRead(BLUE_BUTTON_PIN) == HIGH) {
@@ -177,29 +181,10 @@ void gameLoop() {
   checkReader(reader2, "forest", forestTag, prevForestTag);
   checkReader(reader3, "desert", desertTag, prevDesertTag);
 
-  // Check for mammoth in arctic
-  if (!mammothQuestionAsked && arcticTag == allowedTags[0]) {
-    Serial.println(selectedLanguage + "_q_mammoth_image");
-    waitForButtonPress("mammoth");
-    mammothQuestionAsked = true;
-    questionsAsked++;
-  }
-
-  // Check for pigeon in forest
-  if (!pigeonQuestionAsked && forestTag == allowedTags[1]) {
-    Serial.println(selectedLanguage + "_q_pigeon_image");
-    waitForButtonPress("pigeon");
-    pigeonQuestionAsked = true;
-    questionsAsked++;
-  }
-
-  // Check for tiger in desert
-  if (!tigerQuestionAsked && desertTag == allowedTags[2]) {
-    Serial.println(selectedLanguage + "_q_tiger_image");
-    waitForButtonPress("tiger");
-    tigerQuestionAsked = true;
-    questionsAsked++;
-  }
+  // Check the combinations for each biome
+  checkCombination("arctic", arcticTag);
+  checkCombination("forest", forestTag);
+  checkCombination("desert", desertTag);
 
   // Check if all questions have been asked
   if (questionsAsked >= 3) {
@@ -207,59 +192,17 @@ void gameLoop() {
   }
 }
 
-void waitForButtonPress(String animal) {
-  int correctButton;
-
-  if (animal == "mammoth") {
-    correctButton = YELLOW_BUTTON_PIN;
-  } else if (animal == "pigeon") {
-    correctButton = RED_BUTTON_PIN;
-  } else if (animal == "tiger") {
-    correctButton = RED_BUTTON_PIN;
-  }
-
-  bool buttonPressed = false;
-  while (!buttonPressed) {
-    if (digitalRead(RED_BUTTON_PIN) == LOW) {
-      // Red button pressed
-      Serial.println(selectedLanguage + "_a_" + animal + "_image");
-
-      if (RED_BUTTON_PIN == correctButton) {
-        // Correct answer
-        turnGreenLED();
-        delay(3000);  // Keep LEDs green for 3 seconds
-        turnOffLEDs();
-      } else {
-        // Incorrect answer
-        turnRedLED();
-        delay(3000);  // Keep LEDs red for 3 seconds
-        turnOffLEDs();
-      }
-      buttonPressed = true;
-      delay(500);  // Debounce delay
-    } else if (digitalRead(YELLOW_BUTTON_PIN) == LOW) {
-      // Yellow button pressed
-      Serial.println(selectedLanguage + "_a_" + animal + "_image");
-
-      if (YELLOW_BUTTON_PIN == correctButton) {
-        // Correct answer
-        turnGreenLED();
-        delay(3000);  // Keep LEDs green for 3 seconds
-        turnOffLEDs();
-      } else {
-        // Incorrect answer
-        turnRedLED();
-        delay(3000);  // Keep LEDs red for 3 seconds
-        turnOffLEDs();
-      }
-      buttonPressed = true;
-      delay(500);  // Debounce delay
-    }
-  }
+void handleWinState() {
+  Serial.println(selectedLanguage + "_win_image");
+  // Turn on LEDs to a set color
+  turnGreenLED();  // Indicate win with green LEDs
+  Serial.println("win_sound");
+  delay(5000);
+  gameState = GAME_RESET;  // Transition to reset state
 }
 
-
 void resetGame() {
+  Serial.println("Reseting Game");
   turnPurpleLED();  // Turn all LEDs purple
 
   // Display "storm coming" image based on the selected language
@@ -279,7 +222,7 @@ void resetGame() {
   Serial.println("storm_image");
 
   digitalWrite(ATOMIZER, HIGH);  // Turn on the atomizer
-  delay(10000);                  // Keep it on for 10 seconds
+  delay(15000);                  // Keep it on for 15 seconds
   digitalWrite(ATOMIZER, LOW);   // Turn off the atomizer
   turnOffLEDs();                 // Turn off all LEDs
   Serial.println("Game Has Reset");
@@ -291,6 +234,11 @@ void resetGame() {
   prevForestTag = "";
   prevDesertTag = "";
 
+  // Reset last processed tags
+  lastProcessedArcticTag = "";
+  lastProcessedForestTag = "";
+  lastProcessedDesertTag = "";
+
   // Reset question flags and counter
   mammothQuestionAsked = false;
   pigeonQuestionAsked = false;
@@ -299,15 +247,6 @@ void resetGame() {
 
   selectedLanguage = "";
   gameState = WAITING_FOR_LANGUAGE;
-}
-
-void handleWinState() {
-  Serial.println(selectedLanguage + "_win_image");
-  // Turn on LEDs to a set color
-  turnGreenLED();  // Indicate win with green LEDs
-  Serial.println("win_sound");
-  delay(5000);
-  gameState = GAME_RESET;  // Transition to reset state
 }
 
 // Helper Functions for LED Control
@@ -374,7 +313,7 @@ void checkReader(MFRC522 &reader, String readerName, String &currentTag, String 
       if (tagName != "") {
         Serial.println(selectedLanguage + "_" + tagName + "_" + readerName + "_image");
       } else {
-        Serial.println("Unknown tag detected at " + readerName + " | ID: " + tagID);
+        // Do nothing for tags not in allowedTags
       }
       Serial.println("--------------------------");
     }
@@ -389,4 +328,163 @@ void checkReader(MFRC522 &reader, String readerName, String &currentTag, String 
     currentTag = "";  // No tag present
   }
   prevTag = currentTag;  // Update previous tag
+}
+
+String getAnimalName(String tagID) {
+  for (int i = 0; i < 3; i++) {
+    if (tagID == allowedTags[i]) {
+      return tagNames[i];
+    }
+  }
+  return "";
+}
+
+String correctAnimalForBiome(String biome) {
+  if (biome == "arctic") {
+    return "mammoth";
+  } else if (biome == "forest") {
+    return "pigeon";
+  } else if (biome == "desert") {
+    return "tiger";
+  } else {
+    return "";
+  }
+}
+
+String getLastProcessedTag(String biome) {
+  if (biome == "arctic") {
+    return lastProcessedArcticTag;
+  } else if (biome == "forest") {
+    return lastProcessedForestTag;
+  } else if (biome == "desert") {
+    return lastProcessedDesertTag;
+  } else {
+    return "";
+  }
+}
+
+void setLastProcessedTag(String biome, String tagID) {
+  if (biome == "arctic") {
+    lastProcessedArcticTag = tagID;
+  } else if (biome == "forest") {
+    lastProcessedForestTag = tagID;
+  } else if (biome == "desert") {
+    lastProcessedDesertTag = tagID;
+  }
+}
+
+bool isQuestionAsked(String animalName) {
+  if (animalName == "mammoth") {
+    return mammothQuestionAsked;
+  } else if (animalName == "pigeon") {
+    return pigeonQuestionAsked;
+  } else if (animalName == "tiger") {
+    return tigerQuestionAsked;
+  }
+  return false;
+}
+
+void setQuestionAsked(String animalName) {
+  if (animalName == "mammoth") {
+    mammothQuestionAsked = true;
+  } else if (animalName == "pigeon") {
+    pigeonQuestionAsked = true;
+  } else if (animalName == "tiger") {
+    tigerQuestionAsked = true;
+  }
+}
+
+void checkCombination(String biome, String tagID) {
+  if (tagID != "") {
+    String animalName = getAnimalName(tagID);
+    if (animalName != "") {
+      String correctAnimal = correctAnimalForBiome(biome);
+      // Get the last processed tag for this biome
+      String lastProcessedTag = getLastProcessedTag(biome);
+      if (tagID != lastProcessedTag) {
+        // New tag detected, process it
+        if (animalName == correctAnimal) {
+          // Correct combination
+          Serial.println(selectedLanguage + "_" + animalName + "_" + biome + "_image");
+          turnGreenLED();
+          delay(2000);  // Keep LEDs green for 3 seconds
+          turnOffLEDs();
+
+          // Now, after the LEDs turn off, do the question part
+          // Check if question has already been asked
+          if (!isQuestionAsked(animalName)) {
+            waitForButtonPress(animalName);
+            setQuestionAsked(animalName);
+            questionsAsked++;
+          }
+        } else {
+          // Incorrect combination
+          turnRedLED();
+          delay(2000);  // Keep LEDs red for 2 seconds
+          turnOffLEDs();
+        }
+        // Update last processed tag
+        setLastProcessedTag(biome, tagID);
+      }
+      // else, same tag already processed, do nothing
+    }
+    // else tagID is not in allowedTags, do nothing
+  } else {
+    // No tag present, reset last processed tag for this biome
+    setLastProcessedTag(biome, "");
+  }
+}
+
+void waitForButtonPress(String animal) {
+  int correctButton;
+
+  if (animal == "mammoth") {
+    correctButton = YELLOW_BUTTON_PIN;
+  } else if (animal == "pigeon") {
+    correctButton = RED_BUTTON_PIN;
+  } else if (animal == "tiger") {
+    correctButton = RED_BUTTON_PIN;
+  }
+
+  // Display the question
+  Serial.println(selectedLanguage + "_q_" + animal);
+
+  bool buttonPressed = false;
+  while (!buttonPressed) {
+    if (digitalRead(RED_BUTTON_PIN) == LOW) {
+      // Red button pressed
+      Serial.println(selectedLanguage + "_answer_" + animal);
+
+      if (RED_BUTTON_PIN == correctButton) {
+        // Correct answer
+        turnGreenLED();
+        delay(2000);  // Keep LEDs green for 2 seconds
+        turnOffLEDs();
+      } else {
+        // Incorrect answer
+        turnRedLED();
+        delay(2000);  // Keep LEDs red for 2 seconds
+        turnOffLEDs();
+      }
+      buttonPressed = true;
+      delay(500);  // Debounce delay
+    } else if (digitalRead(YELLOW_BUTTON_PIN) == LOW) {
+      // Yellow button pressed
+      Serial.println(selectedLanguage + "_answer_" + animal);
+
+      if (YELLOW_BUTTON_PIN == correctButton) {
+        // Correct answer
+        turnGreenLED();
+        delay(2000);  // Keep LEDs green for 2 seconds
+        turnOffLEDs();
+      } else {
+        // Incorrect answer
+        turnRedLED();
+        delay(2000);  // Keep LEDs red for 2 seconds
+        turnOffLEDs();
+      }
+      buttonPressed = true;
+      delay(500);  // Debounce delay
+    }
+  }
 }

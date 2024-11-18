@@ -63,12 +63,12 @@ image_paths = {
     'english_a_mammoth_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/english_a_mammoth.png',
     'spanish_a_mammoth_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/spanish_a_mammoth.png',
 
-    'english_q_pigeon_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/english_q_pigeon.png',
-    'spanish_q_pigeon_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/spanish_q_pigeon.png',
-    'english_q_tiger_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/english_q_tiger.png',
-    'spanish_q_tiger_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/spanish_q_tiger.png',
-    'english_q_mammoth_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/english_q_mammoth.png',
-    'spanish_q_mammoth_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/spanish_q_mammoth.png',
+    'english_q_pigeon': '/Users/andrewrosenthal/Cornerstone_Project2/images/english_q_pigeon.png',
+    'spanish_q_pigeon': '/Users/andrewrosenthal/Cornerstone_Project2/images/spanish_q_pigeon.png',
+    'english_q_tiger': '/Users/andrewrosenthal/Cornerstone_Project2/images/english_q_tiger.png',
+    'spanish_q_tiger': '/Users/andrewrosenthal/Cornerstone_Project2/images/spanish_q_tiger.png',
+    'english_q_mammoth': '/Users/andrewrosenthal/Cornerstone_Project2/images/english_q_mammoth.png',
+    'spanish_q_mammoth': '/Users/andrewrosenthal/Cornerstone_Project2/images/spanish_q_mammoth.png',
 
     'english_storm_coming_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/english_storm_coming.png',
     #'spanish_storm_coming_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/spanish_storm_coming.png',
@@ -109,7 +109,8 @@ def update_image(img):
     ax.axis('off')  # Hide axis
     ax.set_position([0, 0, 1, 1])  # Set left, bottom, right, top to 0, 0, 1, 1
     plt.draw()
-    plt.pause(3)  # Add a short pause to ensure the image is updated
+    #plt.pause(3)  # Add a short pause to ensure the image is updated
+    plt.pause(1)  # Only 1 second for testing
 
 # Function to play sound
 def play_sound(sound_path):
