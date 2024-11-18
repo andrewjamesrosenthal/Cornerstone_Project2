@@ -35,7 +35,7 @@ enum GameState {
 };
 
 bool welcomeMessageShown = false;
-GameState gameState = WAITING_FOR_LANGUAGE;
+GameState gameState = INTRO_PLAYING;
 
 // Language selection
 String selectedLanguage = "english";  // "english" or "spanish"
@@ -166,13 +166,14 @@ void checkStartButton() {
 void playIntro() {
   for (int i = 2; i <= 11; i++) {
     Serial.println(selectedLanguage + "_intro_" + String(i) + "_image");
-    delay(3000);  // 3-second delay before waiting for button press
+    delay(1000);  // 3-second delay before waiting for button press
 
     // Doesn't continue until the Continue button is pressed
     while (digitalRead(BLUE_BUTTON_PIN) == HIGH) {
       // Wait for the button to be pressed
     }
   }
+  Serial.println("fortnite_music");
   gameState = GAME_PLAYING;
 }
 

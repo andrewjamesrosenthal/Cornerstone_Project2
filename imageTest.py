@@ -40,6 +40,7 @@ image_paths = {
     'english_intro_8_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/english_intro_8.png',
     'english_intro_9_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/english_intro_9.png',
     'english_intro_10_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/english_intro_10.png',
+    'english_intro_11_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/english_intro_11.png',
 
     'spanish_intro_1_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/spanish_intro_1.png',
     'spanish_intro_2_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/spanish_intro_2.png',
@@ -51,6 +52,7 @@ image_paths = {
     'spanish_intro_8_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/spanish_intro_8.png',
     'spanish_intro_9_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/spanish_intro_9.png',
     'spanish_intro_10_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/spanish_intro_10.png',
+    'spanish_intro_11_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/spanish_intro_11.png',
     
     'welcome_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/welcome.jpeg',
     'game_start_spanish_image': '/Users/andrewrosenthal/Cornerstone_Project2/images/game_start_spanish.png',
@@ -77,6 +79,7 @@ image_paths = {
 sound_paths = {
     'english_win_image': '/Users/andrewrosenthal/Cornerstone_Project2/sounds/english_win.mp3',
     'spanish_win_image': '/Users/andrewrosenthal/Cornerstone_Project2/sounds/spanish_win.mp3',
+    'english_intro_11_image': '/Users/andrewrosenthal/Cornerstone_Project2/sounds/fortnite_music.mp3',
 
 }
 
