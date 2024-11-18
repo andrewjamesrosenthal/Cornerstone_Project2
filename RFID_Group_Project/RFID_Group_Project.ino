@@ -164,9 +164,9 @@ void checkStartButton() {
 }
 
 void playIntro() {
-  for (int i = 2; i <= 10; i++) {
+  for (int i = 2; i <= 11; i++) {
     Serial.println(selectedLanguage + "_intro_" + String(i) + "_image");
-    // For Testing only delay(3000);  // 3-second delay before waiting for button press
+    delay(3000);  // 3-second delay before waiting for button press
 
     // Doesn't continue until the Continue button is pressed
     while (digitalRead(BLUE_BUTTON_PIN) == HIGH) {
