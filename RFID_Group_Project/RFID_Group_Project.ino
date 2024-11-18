@@ -13,14 +13,13 @@
 // NeoPixel LED
 #define LED_PIN 6      // NeoPixel connected to pin 6
 #define NUM_PIXELS 60  // Number of LEDs
+
 // Button pins
-#define START_CONTINUE_BUTTON_PIN 2
-#define ENGLISH_BUTTON_PIN 3
-#define SPANISH_BUTTON_PIN 4
+#define BLUE_BUTTON_PIN 2
+#define RED_BUTTON_PIN 3
+#define YELLOW_BUTTON_PIN 4
 
 Adafruit_NeoPixel pixels(NUM_PIXELS, LED_PIN, NEO_GRB + NEO_KHZ800);
-
-
 
 // Output pins (e.g., for ATOMIZER)
 #define ATOMIZER 8  // Define the ATOMIZER pin (update as per your hardware setup)
@@ -33,16 +32,15 @@ enum GameState {
   GAME_PLAYING,
   WIN_STATE,
   GAME_RESET
-
 };
 
-GameState gameState = WIN_STATE;
+GameState gameState = WAITING_FOR_LANGUAGE;
 
 // Language selection
-String selectedLanguage = english ";  // " english " or " spanish "
+String selectedLanguage = "english";  // "english" or "spanish"
 
-  // Readers and tag names
-  const String readerNames[] = { "arctic", "forest", "desert" };
+// Readers and tag names
+const String readerNames[] = { "arctic", "forest", "desert" };
 const String tagNames[] = { "mammoth", "pigeon", "tiger" };
 
 // Update allowedTags to match your actual tag IDs (ensure they are uppercase)
@@ -66,9 +64,11 @@ String prevArcticTag = "";
 String prevForestTag = "";
 String prevDesertTag = "";
 
-bool ledsActivated = false;     // Flag to indicate if LEDs have been activated for current tags
-unsigned long gameWonTime = 0;  // Time when the game was won
-bool welcomeDisplayed = false;  // Flag to track if the welcome image was displayed
+// Variables to track if questions have been asked
+bool mammothQuestionAsked = false;
+bool pigeonQuestionAsked = false;
+bool tigerQuestionAsked = false;
+int questionsAsked = 0;
 
 void setup() {
   Serial.begin(9600);
@@ -84,9 +84,11 @@ void setup() {
   pixels.show();  // Initialize all pixels to 'off'
 
   // Initialize buttons
-  pinMode(START_CONTINUE_BUTTON_PIN, INPUT_PULLUP);
-  pinMode(ENGLISH_BUTTON_PIN, INPUT_PULLUP);
-  pinMode(SPANISH_BUTTON_PIN, INPUT_PULLUP);
+  pinMode(BLUE_BUTTON_PIN, INPUT_PULLUP);
+  pinMode(RED_BUTTON_PIN, INPUT_PULLUP);
+  pinMode(YELLOW_BUTTON_PIN, INPUT_PULLUP);
+  pinMode(RED_BUTTON_PIN, INPUT_PULLUP);
+  pinMode(YELLOW_BUTTON_PIN, INPUT_PULLUP);
 
   // Initialize output pins
   pinMode(ATOMIZER, OUTPUT);
@@ -98,6 +100,7 @@ void setup() {
 }
 
 void loop() {
+  static bool welcomeDisplayed = false;
   if (!welcomeDisplayed) {
     Serial.println("welcome_image");
     welcomeDisplayed = true;  // Set the flag to true after displaying the message
@@ -130,12 +133,12 @@ void loop() {
 }
 
 void checkLanguageSelection() {
-  if (digitalRead(ENGLISH_BUTTON_PIN) == LOW) {
+  if (digitalRead(RED_BUTTON_PIN) == LOW) {
     selectedLanguage = "english";
     gameState = WAITING_FOR_START;
     Serial.println("game_start_english_image");
     delay(100);  // Debounce delay
-  } else if (digitalRead(SPANISH_BUTTON_PIN) == LOW) {
+  } else if (digitalRead(YELLOW_BUTTON_PIN) == LOW) {
     selectedLanguage = "spanish";
     gameState = WAITING_FOR_START;
     Serial.println("game_start_spanish_image");
@@ -148,7 +151,7 @@ void checkStartButton() {
   gameState = WAITING_FOR_START;
 
   while (gameState == WAITING_FOR_START) {
-    if (digitalRead(START_CONTINUE_BUTTON_PIN) == LOW) {
+    if (digitalRead(BLUE_BUTTON_PIN) == LOW) {
       Serial.println("Start button pressed.");
       gameState = INTRO_PLAYING;
       delay(100);  // Debounce delay
@@ -161,8 +164,9 @@ void playIntro() {
     Serial.println(selectedLanguage + "_intro_" + String(i) + "_image");
     delay(3000);  // 3-second delay before waiting for button press
 
-    //Doesn't continue until the Continue button is pressed
-    while (digitalRead(START_CONTINUE_BUTTON_PIN) == HIGH) {
+    // Doesn't continue until the Continue button is pressed
+    while (digitalRead(BLUE_BUTTON_PIN) == HIGH) {
+      // Wait for the button to be pressed
     }
   }
   gameState = GAME_PLAYING;
@@ -173,17 +177,87 @@ void gameLoop() {
   checkReader(reader2, "forest", forestTag, prevForestTag);
   checkReader(reader3, "desert", desertTag, prevDesertTag);
 
-  if (newTagDetected()) {
-    ledsActivated = false;  // Reset the flag when a new tag is detected
+  // Check for mammoth in arctic
+  if (!mammothQuestionAsked && arcticTag == allowedTags[0]) {
+    Serial.println(selectedLanguage + "_q_mammoth_image");
+    waitForButtonPress("mammoth");
+    mammothQuestionAsked = true;
+    questionsAsked++;
   }
 
-  if (!ledsActivated) {
-    checkWin();            // Check if the win condition is met first
-    if (!ledsActivated) {  // If win condition didn't set ledsActivated
-      validateTags();
+  // Check for pigeon in forest
+  if (!pigeonQuestionAsked && forestTag == allowedTags[1]) {
+    Serial.println(selectedLanguage + "_q_pigeon_image");
+    waitForButtonPress("pigeon");
+    pigeonQuestionAsked = true;
+    questionsAsked++;
+  }
+
+  // Check for tiger in desert
+  if (!tigerQuestionAsked && desertTag == allowedTags[2]) {
+    Serial.println(selectedLanguage + "_q_tiger_image");
+    waitForButtonPress("tiger");
+    tigerQuestionAsked = true;
+    questionsAsked++;
+  }
+
+  // Check if all questions have been asked
+  if (questionsAsked >= 3) {
+    gameState = WIN_STATE;
+  }
+}
+
+void waitForButtonPress(String animal) {
+  int correctButton;
+
+  if (animal == "mammoth") {
+    correctButton = YELLOW_BUTTON_PIN;
+  } else if (animal == "pigeon") {
+    correctButton = RED_BUTTON_PIN;
+  } else if (animal == "tiger") {
+    correctButton = RED_BUTTON_PIN;
+  }
+
+  bool buttonPressed = false;
+  while (!buttonPressed) {
+    if (digitalRead(RED_BUTTON_PIN) == LOW) {
+      // Red button pressed
+      Serial.println(selectedLanguage + "_a_" + animal + "_image");
+
+      if (RED_BUTTON_PIN == correctButton) {
+        // Correct answer
+        turnGreenLED();
+        delay(3000);  // Keep LEDs green for 3 seconds
+        turnOffLEDs();
+      } else {
+        // Incorrect answer
+        turnRedLED();
+        delay(3000);  // Keep LEDs red for 3 seconds
+        turnOffLEDs();
+      }
+      buttonPressed = true;
+      delay(500);  // Debounce delay
+    } else if (digitalRead(YELLOW_BUTTON_PIN) == LOW) {
+      // Yellow button pressed
+      Serial.println(selectedLanguage + "_a_" + animal + "_image");
+
+      if (YELLOW_BUTTON_PIN == correctButton) {
+        // Correct answer
+        turnGreenLED();
+        delay(3000);  // Keep LEDs green for 3 seconds
+        turnOffLEDs();
+      } else {
+        // Incorrect answer
+        turnRedLED();
+        delay(3000);  // Keep LEDs red for 3 seconds
+        turnOffLEDs();
+      }
+      buttonPressed = true;
+      delay(500);  // Debounce delay
     }
   }
 }
+
 
 void resetGame() {
   turnPurpleLED();  // Turn all LEDs purple
@@ -191,7 +265,7 @@ void resetGame() {
   // Display "storm coming" image based on the selected language
   Serial.println(selectedLanguage + "_storm_coming_image");
   Serial.println(selectedLanguage + "_storm_coming_sound");
-
+  delay(3000);
   while (arcticTag != "" || forestTag != "" || desertTag != "") {
     checkReader(reader1, "arctic", arcticTag, prevArcticTag);
     checkReader(reader2, "forest", forestTag, prevForestTag);
@@ -216,14 +290,52 @@ void resetGame() {
   prevArcticTag = "";
   prevForestTag = "";
   prevDesertTag = "";
-  ledsActivated = false;
+
+  // Reset question flags and counter
+  mammothQuestionAsked = false;
+  pigeonQuestionAsked = false;
+  tigerQuestionAsked = false;
+  questionsAsked = 0;
+
   selectedLanguage = "";
-  gameWonTime = 0;
-  welcomeDisplayed = false;  // Reset the welcome display flag
-  // Reset the game state to start over
   gameState = WAITING_FOR_LANGUAGE;
 }
 
+void handleWinState() {
+  Serial.println(selectedLanguage + "_win_image");
+  // Turn on LEDs to a set color
+  turnGreenLED();  // Indicate win with green LEDs
+  Serial.println("win_sound");
+  delay(5000);
+  gameState = GAME_RESET;  // Transition to reset state
+}
+
+// Helper Functions for LED Control
+void turnOffLEDs() {
+  pixels.clear();
+  pixels.show();
+}
+
+void turnRedLED() {
+  for (int i = 0; i < NUM_PIXELS; i++) {
+    pixels.setPixelColor(i, pixels.Color(255, 0, 0));  // Red color
+  }
+  pixels.show();
+}
+
+void turnGreenLED() {
+  for (int i = 0; i < NUM_PIXELS; i++) {
+    pixels.setPixelColor(i, pixels.Color(0, 255, 0));  // Green color
+  }
+  pixels.show();
+}
+
+void turnPurpleLED() {
+  for (int i = 0; i < NUM_PIXELS; i++) {
+    pixels.setPixelColor(i, pixels.Color(128, 0, 128));  // Purple color
+  }
+  pixels.show();
+}
 
 void checkReader(MFRC522 &reader, String readerName, String &currentTag, String &prevTag) {
   MFRC522::StatusCode status;
@@ -244,9 +356,6 @@ void checkReader(MFRC522 &reader, String readerName, String &currentTag, String 
       tagID += String(reader.uid.uidByte[i], HEX);
     }
     tagID.toUpperCase();
-
-    // Debug: Print the tag ID being read
-    Serial.println("Reader: " + readerName + " | Tag ID: " + tagID);
 
     // Update the current tag based on the reader
     currentTag = tagID;
@@ -279,100 +388,5 @@ void checkReader(MFRC522 &reader, String readerName, String &currentTag, String 
     }
     currentTag = "";  // No tag present
   }
-}
-
-bool newTagDetected() {
-  // Check if any of the current tags are different from the previous tags
-  bool newTag = (arcticTag != prevArcticTag) || (forestTag != prevForestTag) || (desertTag != prevDesertTag);
-
-  // Update previous tags
-  prevArcticTag = arcticTag;
-  prevForestTag = forestTag;
-  prevDesertTag = desertTag;
-
-  // Debug: Print when a new tag is detected
-  if (newTag) {
-    Serial.println("New tag detected. LEDs reset.");
-  }
-
-  return newTag;
-}
-
-void validateTags() {
-  // Start with LEDs off
-  turnOffLEDs();
-
-  // Check if win condition is met to avoid conflicting LED signals
-  if (arcticTag == allowedTags[0] && forestTag == "53E4BFF4" && desertTag == allowedTags[2]) {
-    ledsActivated = true;
-    return;
-  }
-
-  // Check each reader-tag pairing
-  bool correctArctic = (arcticTag == "" || arcticTag == allowedTags[0]);
-  bool correctForest = (forestTag == "" || forestTag == allowedTags[1]);
-  bool correctDesert = (desertTag == "" || desertTag == allowedTags[2]);
-
-  // Incorrect assignment
-  if ((!correctArctic && arcticTag != "") || (!correctForest && forestTag != "") || (!correctDesert && desertTag != "")) {
-    turnRedLED();  // Incorrect tag on any reader
-    delay(3000);
-    turnOffLEDs();
-    ledsActivated = true;  // LEDs have been activated for current tags
-  }
-  // All correct assignments (but not win condition yet)
-  else if (arcticTag != "" || forestTag != "" || desertTag != "") {
-    turnGreenLED();  // Correct assignments
-    delay(3000);
-    turnOffLEDs();
-    ledsActivated = true;  // LEDs have been activated for current tags
-  }
-}
-
-// Update checkWin to transition to WIN_STATE
-void checkWin() {
-  Serial.println("Checking win condition...");
-  Serial.println("ArcticTag: " + arcticTag + " | Expected: " + allowedTags[0]);
-  Serial.println("ForestTag: " + forestTag + " | Expected: " + allowedTags[1]);
-  Serial.println("DesertTag: " + desertTag + " | Expected: " + allowedTags[2]);
-
-  if (arcticTag == allowedTags[0] && forestTag == allowedTags[1] && desertTag == allowedTags[2]) {
-    ledsActivated = true;   // Prevent further LED updates
-    gameState = WIN_STATE;  // Transition to WIN_STATE
-  }
-}
-
-// Helper Functions for LED Control
-void turnOffLEDs() {
-  pixels.clear();
-  pixels.show();
-}
-//Play Win Sounds after set time go to RESET GAME
-void handleWinState() {
-  Serial.println(selectedLanguage + "_win_image");
-  //Turn on LEDs to a set color
-  Serial.println("win_sound")
-    delay(5000);
-  gameState = GAME_RESET;  // Transition to reset state
-}
-
-void turnRedLED() {
-  for (int i = 0; i < NUM_PIXELS; i++) {
-    pixels.setPixelColor(i, pixels.Color(255, 0, 0));  // Red color
-  }
-  pixels.show();
-}
-
-void turnGreenLED() {
-  for (int i = 0; i < NUM_PIXELS; i++) {
-    pixels.setPixelColor(i, pixels.Color(0, 255, 0));  // Green color
-  }
-  pixels.show();
-}
-
-void turnPurpleLED() {
-  for (int i = 0; i < NUM_PIXELS; i++) {
-    pixels.setPixelColor(i, pixels.Color(128, 0, 128));  // Purple color
-  }
-  pixels.show();
+  prevTag = currentTag;  // Update previous tag
 }
