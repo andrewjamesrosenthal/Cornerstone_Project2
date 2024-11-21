@@ -35,7 +35,7 @@ enum GameState {
 };
 
 bool welcomeMessageShown = false;
-GameState gameState = INTRO_PLAYING;
+GameState gameState = GAME_PLAYING;
 
 // Language selection
 String selectedLanguage = "english";  // "english" or "spanish"
@@ -164,7 +164,7 @@ void checkStartButton() {
 }
 
 void playIntro() {
-  for (int i = 2; i <= 11; i++) {
+  for (int i = 2; i <= 14; i++) {
     Serial.println(selectedLanguage + "_intro_" + String(i) + "_image");
     delay(1000);  // 3-second delay before waiting for button press
 
@@ -173,7 +173,8 @@ void playIntro() {
       // Wait for the button to be pressed
     }
   }
-  Serial.println("fortnite_music");
+  Serial.println(selectedLanguage+"_playing_game_image");
+  //Serial.println("fortnite_music");
   gameState = GAME_PLAYING;
 }
 
@@ -197,8 +198,8 @@ void handleWinState() {
   Serial.println(selectedLanguage + "_win_image");
   // Turn on LEDs to a set color
   turnGreenLED();  // Indicate win with green LEDs
-  Serial.println("win_sound");
-  delay(5000);
+  //Serial.println("win_sound");
+  delay(7500);
   gameState = GAME_RESET;  // Transition to reset state
 }
 
@@ -207,9 +208,11 @@ void resetGame() {
   turnPurpleLED();  // Turn all LEDs purple
 
   // Display "storm coming" image based on the selected language
+  Serial.println(selectedLanguage + "_congrats_image");
+  delay(5000);
   Serial.println(selectedLanguage + "_storm_coming_image");
-  Serial.println(selectedLanguage + "_storm_coming_sound");
-  delay(3000);
+  //Serial.println(selectedLanguage + "_storm_coming_sound");
+  delay(5000);
   while (arcticTag != "" || forestTag != "" || desertTag != "") {
     checkReader(reader1, "arctic", arcticTag, prevArcticTag);
     checkReader(reader2, "forest", forestTag, prevForestTag);
@@ -223,7 +226,7 @@ void resetGame() {
   Serial.println("storm_image");
 
   digitalWrite(ATOMIZER, HIGH);  // Turn on the atomizer
-  delay(15000);                  // Keep it on for 15 seconds
+  delay(10000);                  // Keep it on for 15 seconds
   digitalWrite(ATOMIZER, LOW);   // Turn off the atomizer
   turnOffLEDs();                 // Turn off all LEDs
   Serial.println("Game Has Reset");
@@ -441,51 +444,60 @@ void waitForButtonPress(String animal) {
 
   if (animal == "mammoth") {
     correctButton = YELLOW_BUTTON_PIN;
-  } else if (animal == "pigeon") {
-    correctButton = RED_BUTTON_PIN;
-  } else if (animal == "tiger") {
+  } else if (animal == "pigeon" || animal == "tiger") {
     correctButton = RED_BUTTON_PIN;
   }
 
-  // Display the question
-  Serial.println(selectedLanguage + "_q_" + animal);
+  int randomNumber = random(1, 3); 
+  // Display the question with a random number
+  Serial.println(selectedLanguage + "_q_" + animal + "_" + String(randomNumber));
 
-  bool buttonPressed = false;
-  while (!buttonPressed) {
+  bool correctAnswerGiven = false;
+  while (!correctAnswerGiven) {
     if (digitalRead(RED_BUTTON_PIN) == LOW) {
+      // Debounce delay
+      delay(500);
       // Red button pressed
-      Serial.println(selectedLanguage + "_answer_" + animal);
-
       if (RED_BUTTON_PIN == correctButton) {
         // Correct answer
+        Serial.println(selectedLanguage + "_a_" + animal + "_correct_image_"+String(randomNumber));
         turnGreenLED();
         delay(2000);  // Keep LEDs green for 2 seconds
         turnOffLEDs();
+        delay(1000);  // Wait additional 1 second to make a total of 3 seconds
+        Serial.println(selectedLanguage + "_playing_game_image"); // Print after 3 seconds
+        correctAnswerGiven = true; // Exit the loop
       } else {
         // Incorrect answer
+        Serial.println(selectedLanguage + "_a_" + animal + "_incorrect_image_"+String(randomNumber));
         turnRedLED();
         delay(2000);  // Keep LEDs red for 2 seconds
         turnOffLEDs();
+        // Re-display the question
+        Serial.println(selectedLanguage + "_q_" + animal + "_" + String(randomNumber));
       }
-      buttonPressed = true;
-      delay(500);  // Debounce delay
     } else if (digitalRead(YELLOW_BUTTON_PIN) == LOW) {
+      // Debounce delay
+      delay(500);
       // Yellow button pressed
-      Serial.println(selectedLanguage + "_answer_" + animal);
-
       if (YELLOW_BUTTON_PIN == correctButton) {
         // Correct answer
+        Serial.println(selectedLanguage + "_a_" + animal + "_correct_image_"+String(randomNumber));
         turnGreenLED();
         delay(2000);  // Keep LEDs green for 2 seconds
         turnOffLEDs();
+        delay(1000);  // Wait additional 1 second to make a total of 3 seconds
+        Serial.println(selectedLanguage + "_playing_game_image"); // Print after 3 seconds
+        correctAnswerGiven = true; // Exit the loop
       } else {
         // Incorrect answer
+        Serial.println(selectedLanguage + "_a_" + animal + "_incorrect_image_"+String(randomNumber));
         turnRedLED();
         delay(2000);  // Keep LEDs red for 2 seconds
         turnOffLEDs();
+        // Re-display the question
+        Serial.println(selectedLanguage + "_q_" + animal + "_" + String(randomNumber));
       }
-      buttonPressed = true;
-      delay(500);  // Debounce delay
     }
   }
 }
