@@ -35,7 +35,7 @@ enum GameState {
 };
 
 bool welcomeMessageShown = false;
-GameState gameState = GAME_PLAYING;
+GameState gameState = WAITING_FOR_LANGUAGE;
 
 // Language selection
 String selectedLanguage = "english";  // "english" or "spanish"
@@ -483,10 +483,10 @@ void checkCombination(String biome, String tagID) {
     setLastProcessedTag(biome, "");
   }
 }
-
 void waitForButtonPress(String animal) {
   int correctButton;
 
+  // Determine the correct button based on the animal
   if (animal == "mammoth") {
     correctButton = YELLOW_BUTTON_PIN;
   } else if (animal == "pigeon" || animal == "tiger") {
@@ -536,20 +536,20 @@ void waitForButtonPress(String animal) {
         }
         Serial.println(selectedLanguage + "_a_" + animal + "_correct_image_" + String(randomNumber));
         turnGreenLED();
-        delay(2000);  // Keep LEDs green for 2 seconds
+        delay(3000);  // Updated: Keep LEDs green for 3 seconds
         turnOffLEDs();
-        delay(1000);  // Wait additional 1 second to make a total of 3 seconds
+        delay(2000);  // Updated: Wait additional 2 seconds
 
         // Only print the playing_game_image if fewer than 3 unique questions have been asked
         if (questionsAsked < 3) {
-          Serial.println(selectedLanguage + "_playing_game_image");  // Print after 3 seconds
+          Serial.println(selectedLanguage + "_playing_game_image");  // Print after delay
         }
         correctAnswerGiven = true;  // Exit the loop
       } else {
         // Incorrect answer
         Serial.println(selectedLanguage + "_a_" + animal + "_incorrect_image_" + String(randomNumber));
         turnRedLED();
-        delay(2000);  // Keep LEDs red for 2 seconds
+        delay(3000);  // Updated: Keep LEDs red for 3 seconds
         turnOffLEDs();
         // Re-display the question
         Serial.println(questionString);
@@ -557,3 +557,4 @@ void waitForButtonPress(String animal) {
     }
   }
 }
+

@@ -166,7 +166,7 @@ void checkStartButton() {
 void playIntro() {
   for (int i = 2; i <= 14; i++) {
     Serial.println(selectedLanguage + "_intro_" + String(i) + "_image");
-    delay(1000);  // 3-second delay before waiting for button press
+    delay(1500);  // 3-second delay before waiting for button press
 
     // Doesn't continue until the Continue button is pressed
     while (digitalRead(BLUE_BUTTON_PIN) == HIGH) {
@@ -199,7 +199,7 @@ void handleWinState() {
   // Turn on LEDs to a set color
   turnGreenLED();  // Indicate win with green LEDs
   //Serial.println("win_sound");
-  delay(7500);
+  delay(4500);
   gameState = GAME_RESET;  // Transition to reset state
 }
 
@@ -209,7 +209,7 @@ void resetGame() {
 
   // Display "storm coming" image based on the selected language
   Serial.println(selectedLanguage + "_congrats_image");
-  delay(5000);
+  delay(2000);
   Serial.println(selectedLanguage + "_storm_coming_image");
   //Serial.println(selectedLanguage + "_storm_coming_sound");
   delay(5000);
@@ -221,7 +221,7 @@ void resetGame() {
   }
 
   // Delay for 3 seconds after all tags are removed
-  delay(3000);
+  delay(1000);
 
   Serial.println("storm_image");
 
@@ -300,6 +300,9 @@ void checkReader(MFRC522 &reader, String readerName, String &currentTag, String 
     }
     tagID.toUpperCase();
 
+    // Print the tag ID every time a card is read
+    Serial.println("Tag detected on " + readerName + ": " + tagID);
+
     // Update the current tag based on the reader
     currentTag = tagID;
 
@@ -333,6 +336,7 @@ void checkReader(MFRC522 &reader, String readerName, String &currentTag, String 
   }
   prevTag = currentTag;  // Update previous tag
 }
+
 
 String getAnimalName(String tagID) {
   for (int i = 0; i < 3; i++) {
@@ -411,7 +415,7 @@ void checkCombination(String biome, String tagID) {
           // Correct combination
           Serial.println(selectedLanguage + "_" + animalName + "_" + biome + "_image");
           turnGreenLED();
-          delay(2000);  // Keep LEDs green for 3 seconds
+          delay(3000);  // Keep LEDs green for 3 seconds
           turnOffLEDs();
 
           // Now, after the LEDs turn off, do the question part
@@ -424,7 +428,7 @@ void checkCombination(String biome, String tagID) {
         } else {
           // Incorrect combination
           turnRedLED();
-          delay(2000);  // Keep LEDs red for 2 seconds
+          delay(3000);  // Keep LEDs red for 2 seconds
           turnOffLEDs();
         }
         // Update last processed tag
@@ -462,16 +466,16 @@ void waitForButtonPress(String animal) {
         // Correct answer
         Serial.println(selectedLanguage + "_a_" + animal + "_correct_image_"+String(randomNumber));
         turnGreenLED();
-        delay(2000);  // Keep LEDs green for 2 seconds
+        delay(3000);  // Keep LEDs green for 3 seconds
         turnOffLEDs();
-        delay(1000);  // Wait additional 1 second to make a total of 3 seconds
+        delay(2000);  // Wait additional 1 second to make a total of 3 seconds
         Serial.println(selectedLanguage + "_playing_game_image"); // Print after 3 seconds
         correctAnswerGiven = true; // Exit the loop
       } else {
         // Incorrect answer
         Serial.println(selectedLanguage + "_a_" + animal + "_incorrect_image_"+String(randomNumber));
         turnRedLED();
-        delay(2000);  // Keep LEDs red for 2 seconds
+        delay(3000);  // Keep LEDs red for 2 seconds
         turnOffLEDs();
         // Re-display the question
         Serial.println(selectedLanguage + "_q_" + animal + "_" + String(randomNumber));
@@ -484,9 +488,9 @@ void waitForButtonPress(String animal) {
         // Correct answer
         Serial.println(selectedLanguage + "_a_" + animal + "_correct_image_"+String(randomNumber));
         turnGreenLED();
-        delay(2000);  // Keep LEDs green for 2 seconds
+        delay(3000);  // Keep LEDs green for 2 seconds
         turnOffLEDs();
-        delay(1000);  // Wait additional 1 second to make a total of 3 seconds
+        delay(2000);  // Wait additional 1 second to make a total of 3 seconds
         Serial.println(selectedLanguage + "_playing_game_image"); // Print after 3 seconds
         correctAnswerGiven = true; // Exit the loop
       } else {

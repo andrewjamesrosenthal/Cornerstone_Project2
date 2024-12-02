@@ -196,3 +196,45 @@ if arduino:
     #     print(f"Error: {e}")
     finally:
         arduino.close()
+
+# Display images and play sounds based on Arduino input
+if arduino:
+    try:
+        while True:
+            # Read data from Arduino
+            data = arduino.readline().decode('utf-8').strip()
+            if data:
+                print(f"Received data: {data}")
+
+                # Check if we're starting to collect results
+                if data == "Results:":
+                    collecting_results = True
+                    results_data = [f"--- New Entry at {time.strftime('%Y-%m-%d %H:%M:%S')} ---"]
+                    results_data.append(data)
+                elif collecting_results:
+                    # Check for end of results (assuming "Game Has Reset" marks the end)
+                    if data == "Game Has Reset":
+                        collecting_results = False
+                        # Append the results to the text file
+                        with open('results.txt', 'a') as f:
+                            f.write('\n'.join(results_data) + '\n\n')
+                        print("Results written to results.txt")
+                    else:
+                        results_data.append(data)
+                elif data in images:
+                    print(f"Displaying: {data}")
+                    update_image(images[data])
+                    if data in sound_paths:
+                        print(f"Playing sound for: {data}")
+                        play_sound(sound_paths[data])
+                else:
+                    print(f"Unknown command or no action for: {data}")
+            else:
+                # No data received
+                pass
+    except KeyboardInterrupt:
+        print("Exiting program.")
+    except Exception as e:
+        print(f"Error: {e}")
+    finally:
+        arduino.close()
