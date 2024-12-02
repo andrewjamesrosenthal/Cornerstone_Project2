@@ -186,7 +186,7 @@ void playIntro() {
       // Wait for the button to be pressed
     }
   }
-  Serial.println(selectedLanguage+"_playing_game_image");
+  Serial.println(selectedLanguage + "_playing_game_image");
   //Serial.println("fortnite_music");
   gameState = GAME_PLAYING;
 }
@@ -282,17 +282,17 @@ void resetGame() {
   questionsAsked = 0;
 
   // Reset counters
-  mammoth_attempts = 0;
-  mammoth_correct = 0;
-  mammoth_question_string = "";
+  //mammoth_attempts = 0;
+  // mammoth_correct = 0;
+  // mammoth_question_string = "";
 
-  pigeon_attempts = 0;
-  pigeon_correct = 0;
-  pigeon_question_string = "";
+  // pigeon_attempts = 0;
+  // pigeon_correct = 0;
+  //pigeon_question_string = "";
 
-  tiger_attempts = 0;
-  tiger_correct = 0;
-  tiger_question_string = "";
+  // tiger_attempts = 0;
+  // tiger_correct = 0;
+  // tiger_question_string = "";
 
   selectedLanguage = "";
   gameState = WAITING_FOR_LANGUAGE;
@@ -493,7 +493,7 @@ void waitForButtonPress(String animal) {
     correctButton = RED_BUTTON_PIN;
   }
 
-  int randomNumber = random(1, 3); 
+  int randomNumber = random(1, 3);
   // Display the question with a random number
   String questionString = selectedLanguage + "_q_" + animal + "_" + String(randomNumber);
   Serial.println(questionString);
@@ -534,16 +534,20 @@ void waitForButtonPress(String animal) {
         } else if (animal == "tiger") {
           tiger_correct++;
         }
-        Serial.println(selectedLanguage + "_a_" + animal + "_correct_image_"+String(randomNumber));
+        Serial.println(selectedLanguage + "_a_" + animal + "_correct_image_" + String(randomNumber));
         turnGreenLED();
         delay(2000);  // Keep LEDs green for 2 seconds
         turnOffLEDs();
         delay(1000);  // Wait additional 1 second to make a total of 3 seconds
-        Serial.println(selectedLanguage + "_playing_game_image"); // Print after 3 seconds
-        correctAnswerGiven = true; // Exit the loop
+
+        // Only print the playing_game_image if fewer than 3 unique questions have been asked
+        if (questionsAsked < 3) {
+          Serial.println(selectedLanguage + "_playing_game_image");  // Print after 3 seconds
+        }
+        correctAnswerGiven = true;  // Exit the loop
       } else {
         // Incorrect answer
-        Serial.println(selectedLanguage + "_a_" + animal + "_incorrect_image_"+String(randomNumber));
+        Serial.println(selectedLanguage + "_a_" + animal + "_incorrect_image_" + String(randomNumber));
         turnRedLED();
         delay(2000);  // Keep LEDs red for 2 seconds
         turnOffLEDs();
