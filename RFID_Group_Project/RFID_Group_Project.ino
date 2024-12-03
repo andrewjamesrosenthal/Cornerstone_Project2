@@ -35,7 +35,7 @@ enum GameState {
 };
 
 bool welcomeMessageShown = false;
-GameState gameState = GAME_PLAYING;
+GameState gameState = WAITING_FOR_LANGUAGE;
 
 // Language selection
 String selectedLanguage = "english";  // "english" or "spanish"
