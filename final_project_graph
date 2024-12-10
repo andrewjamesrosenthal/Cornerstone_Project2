@@ -1,54 +1,36 @@
-import matplotlib
-matplotlib.use('TkAgg')  # Set the backend to TkAgg or another suitable one for your environment
 import matplotlib.pyplot as plt
-import re
 from datetime import datetime
-import unittest
+import numpy as np
 
-# Function to parse the results.txt file
-def parse_results(file_path):
-    game_entries = []
-    current_entry = None
-    with open(file_path, 'r') as f:
-        for line in f:
-            line = line.strip()
-            # Check for a new entry
-            if line.startswith('--- New Entry at '):
-                # If there's an existing entry, add it to the list
-                if current_entry:
-                    game_entries.append(current_entry)
-                # Start a new entry
-                timestamp_str = line.replace('--- New Entry at ', '').replace(' ---', '')
-                timestamp = datetime.strptime(timestamp_str, '%Y-%m-%d %H:%M:%S')
-                current_entry = {
-                    'timestamp': timestamp,
-                    'questions': []
-                }
-            elif line.startswith('Question:'):
-                question = line.replace('Question: ', '')
-                current_entry['questions'].append({
-                    'question': question,
-                    'correct_answers': 0,
-                    'attempts': 0
-                })
-            elif line.startswith('Correct answers:'):
-                correct_answers = int(line.replace('Correct answers: ', ''))
-                current_entry['questions'][-1]['correct_answers'] = correct_answers
-            elif line.startswith('Attempts:'):
-                attempts = int(line.replace('Attempts: ', ''))
-                current_entry['questions'][-1]['attempts'] = attempts
-        # Add the last entry
-        if current_entry:
-            game_entries.append(current_entry)
-    return game_entries
+# Sample parsed data for demonstration
+game_entries = [
+    {
+        'timestamp': datetime(2023, 10, 8, 16, 11, 45),
+        'questions': [
+            {'question': 'english_q_mammoth_45', 'correct_answers': 28, 'attempts': 45},
+            {'question': 'english_q_pigeon_36', 'correct_answers': 28, 'attempts': 36},
+            {'question': 'english_q_tiger_40', 'correct_answers': 28, 'attempts': 40},
+        ]
+    },
+    {
+        'timestamp': datetime(2023, 10, 8, 16, 10, 45),
+        'questions': [
+            {'question': 'english_q_mammoth_1', 'correct_answers': 1, 'attempts': 1},
+            {'question': 'english_q_pigeon_2', 'correct_answers': 1, 'attempts': 2},
+            {'question': 'english_q_tiger_1', 'correct_answers': 1, 'attempts': 1},
+        ]
+    }
+]
 
-# Function to generate graphs
+# Function to generate example graphs based on sample data
 def generate_graphs(game_entries):
-    if not game_entries:
-        print("No data available to plot.")
-        return
-
-    # Extract data
+    # Map question identifiers to user-friendly labels
+    question_labels = {
+        'english_q_mammoth_1': 'Mammoth Question',
+        'english_q_pigeon_2': 'Pigeon Question',
+        'english_q_tiger_1': 'Tiger Question',
+    }
+    
     questions = {}
     for entry in game_entries:
         for q in entry['questions']:
@@ -63,87 +45,54 @@ def generate_graphs(game_entries):
             questions[question_name]['correct_answers'].append(q['correct_answers'])
             questions[question_name]['timestamps'].append(entry['timestamp'])
 
-    # Plot total attempts over time for each question
+    # Example 1: Performance over time for each question
     for question_name, data in questions.items():
         plt.figure(figsize=(10, 5))
         plt.plot(data['timestamps'], data['attempts'], marker='o', label='Attempts')
         plt.plot(data['timestamps'], data['correct_answers'], marker='x', label='Correct Answers')
-        plt.title(f"Performance over time for {question_name}")
+        plt.title(f"Performance over time for {question_labels.get(question_name, question_name)}")
         plt.xlabel('Timestamp')
         plt.ylabel('Count')
         plt.legend()
         plt.xticks(rotation=45)
+        plt.yticks(range(0, max(max(data['attempts']), max(data['correct_answers'])) + 1))
         plt.tight_layout()
         plt.show()
 
-    # Plot average attempts per question
-    avg_attempts = {}
-    for question_name, data in questions.items():
-        avg_attempts[question_name] = sum(data['attempts']) / len(data['attempts'])
+    # Example 2: Average Attempts per Question
+    avg_attempts = {question: sum(data['attempts']) / len(data['attempts']) for question, data in questions.items()}
+    colors = plt.cm.tab10(np.linspace(0, 1, len(avg_attempts)))
 
     plt.figure(figsize=(10, 5))
-    plt.bar(avg_attempts.keys(), avg_attempts.values())
+    plt.bar(
+        [question_labels.get(q, q) for q in avg_attempts.keys()],
+        avg_attempts.values(),
+        color=colors
+    )
     plt.title('Average Attempts per Question')
     plt.xlabel('Question')
     plt.ylabel('Average Attempts')
+    plt.yticks(range(0, int(max(avg_attempts.values())) + 2))
     plt.xticks(rotation=45)
     plt.tight_layout()
     plt.show()
 
-    # Plot total correct answers per question
-    total_correct = {}
-    for question_name, data in questions.items():
-        total_correct[question_name] = sum(data['correct_answers'])
+    # Example 3: Total Correct Answers per Question
+    total_correct = {question: sum(data['correct_answers']) for question, data in questions.items()}
 
     plt.figure(figsize=(10, 5))
-    plt.bar(total_correct.keys(), total_correct.values())
+    plt.bar(
+        [question_labels.get(q, q) for q in total_correct.keys()],
+        total_correct.values(),
+        color=colors
+    )
     plt.title('Total Correct Answers per Question')
     plt.xlabel('Question')
     plt.ylabel('Total Correct Answers')
+    plt.yticks(range(0, int(max(total_correct.values())) + 2))
     plt.xticks(rotation=45)
     plt.tight_layout()
     plt.show()
 
-# Unit test for parse_results function
-class TestParseResults(unittest.TestCase):
-    def test_parse_results(self):
-        test_data = """--- New Entry at 2023-10-01 12:00:00 ---
-Question: What is the capital of France?
-Correct answers: 3
-Attempts: 5
---- New Entry at 2023-10-02 13:00:00 ---
-Question: What is 2 + 2?
-Correct answers: 4
-Attempts: 4
-"""
-        with open('test_results.txt', 'w') as f:
-            f.write(test_data)
-
-        expected_output = [
-            {
-                'timestamp': datetime(2023, 10, 1, 12, 0, 0),
-                'questions': [
-                    {
-                        'question': 'What is the capital of France?',
-                        'correct_answers': 3,
-                        'attempts': 5
-                    }
-                ]
-            },
-            {
-                'timestamp': datetime(2023, 10, 2, 13, 0, 0),
-                'questions': [
-                    {
-                        'question': 'What is 2 + 2?',
-                        'correct_answers': 4,
-                        'attempts': 4
-                    }
-                ]
-            }
-        ]
-
-        result = parse_results('test_results.txt')
-        self.assertEqual(result, expected_output)
-
-if __name__ == "__main__":
-    unittest.main()
+# Generate the updated example graphs
+generate_graphs(game_entries)
