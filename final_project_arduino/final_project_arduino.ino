@@ -1,62 +1,63 @@
 #include <SPI.h>
 #include <MFRC522.h>
-#include <Adafruit_NeoPixel.h>  // Include the NeoPixel library
+#include <Adafruit_NeoPixel.h>  // Include the NeoPixel library for controlling RGB LEDs
 
 // RFID reader pins
-#define RST_PIN 7
+#define RST_PIN 7  // Reset pin for all RFID readers
 
-// RFID readers
-#define SS_PIN1 5
-#define SS_PIN2 9
-#define SS_PIN3 10
+// RFID readers' Slave Select (SS) pins
+#define SS_PIN1 5  // Arctic reader
+#define SS_PIN2 9  // Forest reader
+#define SS_PIN3 10 // Desert reader
 
-// NeoPixel LED
-#define LED_PIN 6      // NeoPixel connected to pin 6
-#define NUM_PIXELS 60  // Number of LEDs
+// NeoPixel LED configuration
+#define LED_PIN 6      // Pin connected to NeoPixel LEDs
+#define NUM_PIXELS 60  // Total number of NeoPixel LEDs
 
 // Button pins
-#define BLUE_BUTTON_PIN 2
-#define RED_BUTTON_PIN 3
-#define YELLOW_BUTTON_PIN 4
+#define BLUE_BUTTON_PIN 2    // Start button
+#define RED_BUTTON_PIN 3     // Button used for answers or language selection
+#define YELLOW_BUTTON_PIN 4  // Button used for answers or language selection
 
+// Initialize the NeoPixel object
 Adafruit_NeoPixel pixels(NUM_PIXELS, LED_PIN, NEO_GRB + NEO_KHZ800);
 
-// Output pins (e.g., for ATOMIZER)
-#define ATOMIZER 8  // Define the ATOMIZER pin (update as per your hardware setup)
+// Output pins (e.g., for the atomizer component)
+#define ATOMIZER 8  // Pin controlling the atomizer device
 
-// Game states
+// Game states for controlling the flow of the program
 enum GameState {
-  WAITING_FOR_LANGUAGE,
-  WAITING_FOR_START,
-  INTRO_PLAYING,
-  GAME_PLAYING,
-  WIN_STATE,
-  GAME_RESET
+  WAITING_FOR_LANGUAGE, // Waiting for the user to select a language
+  WAITING_FOR_START,    // Waiting for the start button to be pressed
+  INTRO_PLAYING,        // Playing the introduction
+  GAME_PLAYING,         // Game is active and tags are being scanned
+  WIN_STATE,            // User has won the game
+  GAME_RESET            // Game is resetting
 };
 
-bool welcomeMessageShown = false;
-GameState gameState = WAITING_FOR_LANGUAGE;
+bool welcomeMessageShown = false;  // Tracks if the welcome message has been displayed
+GameState gameState = WAITING_FOR_LANGUAGE;  // Initial state of the game
 
-// Language selection
-String selectedLanguage = "english";  // "english" or "spanish"
+// Language selection variable
+String selectedLanguage = "english";  // Default language is English
 
-// Readers and tag names
-const String readerNames[] = { "arctic", "forest", "desert" };
-const String tagNames[] = { "mammoth", "pigeon", "tiger" };
+// RFID reader and tag configuration
+const String readerNames[] = { "arctic", "forest", "desert" };  // Reader locations
+const String tagNames[] = { "mammoth", "pigeon", "tiger" };     // Animal names corresponding to tags
 
-// Update allowedTags to match your actual tag IDs (ensure they are uppercase)
+// Allowed tag IDs for each animal (replace these with actual tag IDs)
 const String allowedTags[] = {
-  "532BC0F4",  // mammoth
-  "F3DCBFF4",  // pigeon
-  "53E4BFF4"   // tiger
+  "532BC0F4",  // Mammoth tag
+  "F3DCBFF4",  // Pigeon tag
+  "53E4BFF4"   // Tiger tag
 };
 
-// Create instances for each reader
+// Create instances for each RFID reader
 MFRC522 reader1(SS_PIN1, RST_PIN);
 MFRC522 reader2(SS_PIN2, RST_PIN);
 MFRC522 reader3(SS_PIN3, RST_PIN);
 
-// Variables to store the current and previous state of each reader
+// Variables to track current and previous tag states for each reader
 String arcticTag = "";
 String forestTag = "";
 String desertTag = "";
@@ -70,13 +71,13 @@ String lastProcessedArcticTag = "";
 String lastProcessedForestTag = "";
 String lastProcessedDesertTag = "";
 
-// Variables to track if questions have been asked
+// Flags to check if questions for each animal have been asked
 bool mammothQuestionAsked = false;
 bool pigeonQuestionAsked = false;
 bool tigerQuestionAsked = false;
-int questionsAsked = 0;
+int questionsAsked = 0;  // Total questions asked so far
 
-// Variables to track the number of attempts and correct answers per question
+// Variables for tracking attempts and correct answers for each question
 int mammoth_attempts = 0;
 int mammoth_correct = 0;
 String mammoth_question_string = "";
@@ -90,61 +91,63 @@ int tiger_correct = 0;
 String tiger_question_string = "";
 
 void setup() {
-  Serial.begin(9600);
-  SPI.begin();
+  Serial.begin(9600);  // Start the serial communication
+  SPI.begin();         // Initialize SPI communication for RFID readers
 
   // Initialize RFID readers
   reader1.PCD_Init();
   reader2.PCD_Init();
   reader3.PCD_Init();
 
-  // Initialize NeoPixel
+  // Initialize NeoPixel LEDs
   pixels.begin();
-  pixels.show();  // Initialize all pixels to 'off'
+  pixels.show();  // Ensure all LEDs are off at the start
 
-  // Initialize buttons
+  // Configure buttons as inputs with pull-up resistors
   pinMode(BLUE_BUTTON_PIN, INPUT_PULLUP);
   pinMode(RED_BUTTON_PIN, INPUT_PULLUP);
   pinMode(YELLOW_BUTTON_PIN, INPUT_PULLUP);
 
-  // Initialize output pins
+  // Configure atomizer pin as output
   pinMode(ATOMIZER, OUTPUT);
-  digitalWrite(ATOMIZER, LOW);  // Ensure the atomizer is off at start
+  digitalWrite(ATOMIZER, LOW);  // Ensure the atomizer is off at the start
 
+  // Display initial game instructions
   Serial.println("--------------------------");
   Serial.println(" Access Control ");
   Serial.println("Select Language: Press English or Spanish Button");
 }
 
 void loop() {
+  // Main game loop controlled by the current state
   switch (gameState) {
     case WAITING_FOR_LANGUAGE:
       if (!welcomeMessageShown) {
-        Serial.println("welcome_image");
-        welcomeMessageShown = true;  // Mark as shown
+        Serial.println("welcome_image");  // Display welcome message
+        welcomeMessageShown = true;
       }
-      checkLanguageSelection();
+      checkLanguageSelection();  // Check for language selection
       break;
 
     case WAITING_FOR_START:
-      checkStartButton();
+      checkStartButton();  // Wait for the start button to be pressed
       break;
 
     case INTRO_PLAYING:
-      playIntro();
+      playIntro();  // Play the game introduction
       break;
 
     case GAME_PLAYING:
-      gameLoop();
+      gameLoop();  // Handle game logic
       break;
 
     case WIN_STATE:
-      handleWinState();
+      handleWinState();  // Handle game win state
       break;
 
     case GAME_RESET:
-      welcomeMessageShown = false;  // Reset the flag
-      resetGame();
+      welcomeMessageShown = false;  // Reset the welcome message flag
+      resetGame();  // Reset game variables and state
       break;
   }
 }
